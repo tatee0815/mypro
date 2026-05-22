@@ -58,14 +58,15 @@ function openModal(imgSrc) {
   // Chấp nhận cả việc truyền vào một Element (this) hoặc chuỗi đường dẫn (this.src)
   img.src = imgSrc.src ? imgSrc.src : imgSrc; 
   img.style.display = 'block';
-  
-  // Chỉ ẩn nếu các phần tử này thực sự tồn tại trên trang
   if (deleteModal) deleteModal.style.display = 'none';
   if (uploadModal) uploadModal.style.display = 'none';
-  
   modal.classList.add('active');
 
-  // Kiểm tra an toàn trước khi gán sự kiện cho nút Close
+  const cursor = document.querySelector('.cursor');
+  if (cursor) {
+    cursor.classList.add('modal-active');
+  }
+
   const closeBtn = modal.querySelector('.img-modal-close');
   if (closeBtn) {
     closeBtn.onclick = closeModal;
@@ -79,6 +80,10 @@ function openModal(imgSrc) {
 function closeModal() {
   if (modal) {
     modal.classList.remove('active');
+    const cursor = document.querySelector('.cursor');
+    if (cursor) {
+      cursor.classList.remove('modal-active');
+    }
     if (img) img.style.display = 'none';
     if (deleteModal) deleteModal.style.display = 'none';
     if (deleteModalPasswordInput) deleteModalPasswordInput.value = '';

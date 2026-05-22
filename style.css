@@ -57,6 +57,22 @@ body.somepics-page{
     transform: scale(1.3);
 }
 
+.cursor.modal-active {
+    background-color: rgba(255, 255, 255, 1);    /* Tâm con trỏ màu trắng tinh */
+    width: 24px;                                 /* Phóng to nhẹ con trỏ */
+    height: 24px;
+    border: 3px solid rgba(0, 140, 255, 1);      /* Viền ngoài màu xanh dương đậm nổi bật */
+    
+    box-shadow: 0 0 12px rgba(0, 191, 255, 0.9), 
+                0 0 25px rgba(0, 102, 255, 0.5); 
+    
+    mix-blend-mode: normal;                      
+    
+    z-index: 999999;                             
+    
+    transition: background-color 0.2s ease, border-color 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
 #gallery img {
     max-width: 300px;
     max-height: 150px;
@@ -266,17 +282,13 @@ body.projects-page {
 .project-card {
     position: relative;
     background: none;
-    /* Cố định border mờ ngay từ đầu, thay đổi độ sáng bằng opacity lớp giả nếu cần */
     border: 1px solid rgba(255, 255, 255, 0.2); 
     border-radius: 2rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    /* Bỏ border-color khỏi transition để tránh repaint */
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    
-    /* Ép buộc tăng tốc phần cứng 3D */
+
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
@@ -311,14 +323,6 @@ body.projects-page {
     pointer-events: none;
 }
 
-.project-card:hover {
-    transform: translateY(-8px);
-}
-
-.project-card:hover::after {
-    opacity: 1;
-}
-
 /* Khu vực hiển thị ảnh game */
 .project-gallery {
     padding: 1.5rem;
@@ -344,11 +348,6 @@ body.projects-page {
     will-change: auto;
 }
 
-.project-card:hover .project-main-img {
-    will-change: transform;
-    transform: scale(1.03);
-}
-
 .project-thumbnails {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -361,19 +360,15 @@ body.projects-page {
     object-fit: cover;
     border-radius: 0.8rem;
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.2); /* Đổi từ transparent sang có màu mờ sẵn */
+    border: 2px solid transparent;
     opacity: 0.55;
-    /* Tối ưu hóa các thuộc tính được transition */
-    transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    will-change: auto;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
 }
 
 .project-thumbnail:hover,
 .project-thumbnail.active {
-    will-change: transform, opacity;
     opacity: 1;
     border-color: #ff0000;
-    transform: translateY(-2px);
 }
 
 /* Phần thông tin chi tiết game */
