@@ -240,26 +240,246 @@ section{
 }
 
 /* projects.html */
-.project{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    margin: -10px 10rem;
+body.projects-page {
+    background-color: rgba(225, 106, 255, 1);
+    height: auto;
+    min-height: 100vh;
 }
 
-.projects-content h1{
+.project {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 4rem;
+    margin: 2rem auto;
+    width: 100%;
+    max-width: 1200px;
+    padding: 8rem 2rem 5rem 2rem; /* padding trên lớn để không bị header che khuất */
+}
+
+.projects-content {
+    width: 100%;
+    text-align: center;
+}
+
+.projects-content h1 {
     font-size: 5rem;
     font-weight: 700;
     line-height: 1.3;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
-.projects-content p{
-    font-size: 2rem;
-    margin-top: 1rem;
-    line-height: 1.5;
-    color: white;
+.projects-subtitle {
+    font-size: 1.8rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 800px;
+    margin: 0 auto 4rem auto !important;
 }
+
+/* Lưới dự án Responsive */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 3.5rem;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+/* Thẻ dự án kính mờ - Glassmorphism */
+.project-card {
+    position: relative;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 2rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    will-change: transform, box-shadow;
+}
+
+.project-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-radius: inherit;
+    z-index: -1;
+    pointer-events: none; /* prevent capturing mouse events */
+}
+
+.project-card:hover {
+    transform: translateY(-8px); /* Giảm nhẹ độ dịch chuyển từ -10px xuống -8px giúp cảm giác trượt đầm và mượt mà hơn */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22), 0 0 25px rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Khu vực hiển thị ảnh game */
+.project-gallery {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.main-img-wrapper {
+    width: 100%;
+    height: 200px;
+    border-radius: 1.2rem;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.project-main-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Đồng bộ đường cong chuyển động mượt mà và thêm will-change */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform;
+}
+
+.project-card:hover .project-main-img {
+    transform: scale(1.03); /* Giảm nhẹ tỉ lệ scale từ 1.04 xuống 1.03 để tránh lag khi vẽ lại */
+}
+
+.project-thumbnails {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+}
+
+.project-thumbnail {
+    width: 100%;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    opacity: 0.55;
+    /* Chỉ định rõ ràng thuộc tính cần transition để tránh tính toán lại layout không cần thiết */
+    transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform, opacity;
+}
+
+.project-thumbnail:hover,
+.project-thumbnail.active {
+    opacity: 1;
+    border-color: red;
+    transform: translateY(-2px);
+}
+
+/* Phần thông tin chi tiết game */
+.project-info {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 1.5rem;
+}
+
+.project-info h3 {
+    font-size: 2.4rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.project-tags span {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.project-info p {
+    font-size: 1.4rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.88);
+    margin-bottom: 1.5rem;
+    text-align: justify;
+    flex-grow: 1;
+}
+
+/* Nút GitHub sang trọng */
+.github-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: white;
+    color: black;
+    font-size: 1.35rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: 3rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+}
+
+.github-btn i {
+    font-size: 1.6rem;
+}
+
+.github-btn:hover {
+    background: transparent;
+    color: white;
+    border-color: white;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+}
+
+.github-btn:active {
+    transform: translateY(0);
+}
+
+/* Media Query riêng cho Projects trên Mobile */
+@media (max-width: 768px) {
+    .project {
+        padding: 6rem 1.5rem 3rem 1.5rem;
+        gap: 2.5rem;
+    }
+    .projects-content h1 {
+        font-size: 3.6rem;
+    }
+    .projects-subtitle {
+        font-size: 1.5rem;
+        margin-bottom: 2.5rem !important;
+    }
+    .projects-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+    .project-card {
+        border-radius: 1.6rem;
+    }
+    .project-info {
+        padding: 2rem;
+    }
+}
+
 
 /* somepics.html */
 .somepics-section{

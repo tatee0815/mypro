@@ -23,10 +23,85 @@
     </header>
     <section class="project">
         <div class="projects-content">
-            <h1>Nothing yet</h1>
-            <p>
-                Will be updated soon with my projects. <br>
-            </p>
+            <h1>My Projects</h1>
+            <p class="projects-subtitle">Dưới đây là một số dự án game hấp dẫn mà tôi đã phát triển. Bạn có thể rê chuột vào các ảnh thu nhỏ để xem thêm ảnh chụp màn hình và nhấn nút để truy cập GitHub nhé!</p>
+            
+            <div class="projects-grid">
+                <!-- Skibidi Game Card -->
+                <div class="project-card">
+                    <div class="project-gallery">
+                        <div class="main-img-wrapper">
+                            <img class="project-main-img" id="skibidi-main" src="Pictures/skibidi_game.png" alt="Skibidi Game">
+                        </div>
+                        <div class="project-thumbnails">
+                            <img class="project-thumbnail active" src="Pictures/skibidi_game.png" alt="Skibidi Game Screenshot 1" onmouseenter="document.getElementById('skibidi-main').src='Pictures/skibidi_game.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/skibidi_game1.png" alt="Skibidi Game Screenshot 2" onmouseenter="document.getElementById('skibidi-main').src='Pictures/skibidi_game1.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/skibidi_game2.png" alt="Skibidi Game Screenshot 3" onmouseenter="document.getElementById('skibidi-main').src='Pictures/skibidi_game2.png'; updateActiveThumbnail(this)">
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>Skibidi Game</h3>
+                        <div class="project-tags">
+                            <span><i class="fa-solid fa-gamepad"></i> Action Game</span>
+                            <span><i class="fa-solid fa-cubes"></i> Python / Pygame</span>
+                        </div>
+                        <p>Trò chơi hành động 2D vui nhộn đầy kịch tính lấy cảm hứng từ các game metroidvania. Game sở hữu nhịp độ nhanh, cơ chế điều khiển mượt mà cùng nhiều thử thách lôi cuốn tăng dần.</p>
+                        <a href="https://github.com/tatee0815/B3.git" target="_blank" rel="noopener noreferrer" class="github-btn">
+                            <i class="fa-brands fa-github"></i> GitHub Repo
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Neon Hex Card -->
+                <div class="project-card">
+                    <div class="project-gallery">
+                        <div class="main-img-wrapper">
+                            <img class="project-main-img" id="neon-main" src="Pictures/neon_hex.png" alt="Neon Hex">
+                        </div>
+                        <div class="project-thumbnails">
+                            <img class="project-thumbnail active" src="Pictures/neon_hex.png" alt="Neon Hex Screenshot 1" onmouseenter="document.getElementById('neon-main').src='Pictures/neon_hex.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/neon_hex1.png" alt="Neon Hex Screenshot 2" onmouseenter="document.getElementById('neon-main').src='Pictures/neon_hex1.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/neon_hex2.png" alt="Neon Hex Screenshot 3" onmouseenter="document.getElementById('neon-main').src='Pictures/neon_hex2.png'; updateActiveThumbnail(this)">
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>Neon Hex</h3>
+                        <div class="project-tags">
+                            <span><i class="fa-solid fa-brain"></i> Puzzle / Arcade</span>
+                            <span><i class="fa-solid fa-code"></i> Python / Pygame</span>
+                        </div>
+                        <p>Trò chơi trí tuệ đỉnh cao với phong cách đồ họa Neon phát sáng huyền ảo. Người chơi sẽ cần sự tập trung tuyệt đối và nhạy bén để chinh phục màn chơi Hexagon với những AI phức tạp.</p>
+                        <a href="https://github.com/tatee0815/A4.git" target="_blank" rel="noopener noreferrer" class="github-btn">
+                            <i class="fa-brands fa-github"></i> GitHub Repo
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tank Game Card -->
+                <div class="project-card">
+                    <div class="project-gallery">
+                        <div class="main-img-wrapper">
+                            <img class="project-main-img" id="tank-main" src="Pictures/tank_game.png" alt="Tank Game">
+                        </div>
+                        <div class="project-thumbnails">
+                            <img class="project-thumbnail active" src="Pictures/tank_game.png" alt="Tank Game Screenshot 1" onmouseenter="document.getElementById('tank-main').src='Pictures/tank_game.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/tank_game1.png" alt="Tank Game Screenshot 2" onmouseenter="document.getElementById('tank-main').src='Pictures/tank_game1.png'; updateActiveThumbnail(this)">
+                            <img class="project-thumbnail" src="Pictures/tank_game2.png" alt="Tank Game Screenshot 3" onmouseenter="document.getElementById('tank-main').src='Pictures/tank_game2.png'; updateActiveThumbnail(this)">
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>Tank Game</h3>
+                        <div class="project-tags">
+                            <span><i class="fa-solid fa-crosshairs"></i> Combat Strategy</span>
+                            <span><i class="fa-solid fa-cube"></i> Godot / GDScript</span>
+                        </div>
+                        <p>Đấu trường xe tăng 3D khốc liệt với lối chơi đơn giản. Game sở hữu nhiều tính năng như vật phẩm, multiplayer, chướng ngại vật tương tác và chế độ AI thông minh đầy thử thách.</p>
+                        <a href="https://github.com/tatee0815/A6.git" target="_blank" rel="noopener noreferrer" class="github-btn">
+                            <i class="fa-brands fa-github"></i> GitHub Repo
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
         <footer class="footer-contact">
             <h3>Please contact me at: </h3>
@@ -39,6 +114,14 @@
             <h4>gmail: htan2582@gmail.com</h4>
         </footer>
     </section>
+    <script>
+        function updateActiveThumbnail(el) {
+            const parent = el.parentElement;
+            const thumbnails = parent.querySelectorAll('.project-thumbnail');
+            thumbnails.forEach(thumb => thumb.classList.remove('active'));
+            el.classList.add('active');
+        }
+    </script>
     <script src="scripts.js"></script>
 </body>
 </html>

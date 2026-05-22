@@ -244,11 +244,13 @@ if (uploadForm) {
   fetchImages();
 }
 
-document.getElementById('img-modal').addEventListener('click', function(e) {
-    if (e.target === this || e.target.classList.contains('img-modal-close')) {
-        if (typeof closeModal === 'function') closeModal();
-    }
-});
+if (modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this || e.target.classList.contains('img-modal-close')) {
+            if (typeof closeModal === 'function') closeModal();
+        }
+    });
+}
 
 window.openModal = openModal;
 window.closeModal = closeModal;
