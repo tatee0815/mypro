@@ -50,17 +50,27 @@ if (menuBtn && nav) {
 
 // Modal functions
 function openModal(imgSrc) {
-  if (!modal || !img || !deleteModal || !uploadModal) {
-    console.error('Không tìm thấy các phần tử modal');
+  if (!modal || !img) {
+    console.error('Không tìm thấy các phần tử modal cốt lõi (#img-modal hoặc #img-modal-img)');
     return;
   }
-  img.src = imgSrc;
+  
+  // Chấp nhận cả việc truyền vào một Element (this) hoặc chuỗi đường dẫn (this.src)
+  img.src = imgSrc.src ? imgSrc.src : imgSrc; 
   img.style.display = 'block';
-  deleteModal.style.display = 'none';
-  uploadModal.style.display = 'none';
+  
+  // Chỉ ẩn nếu các phần tử này thực sự tồn tại trên trang
+  if (deleteModal) deleteModal.style.display = 'none';
+  if (uploadModal) uploadModal.style.display = 'none';
+  
   modal.classList.add('active');
 
-  modal.querySelector('.img-modal-close').onclick = closeModal;
+  // Kiểm tra an toàn trước khi gán sự kiện cho nút Close
+  const closeBtn = modal.querySelector('.img-modal-close');
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
+  
   modal.onclick = function(e) {
     if (e.target === modal) closeModal();
   };

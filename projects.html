@@ -24,14 +24,14 @@
     <section class="project">
         <div class="projects-content">
             <h1>My Projects</h1>
-            <p class="projects-subtitle">Dưới đây là một số dự án game hấp dẫn mà tôi đã phát triển. Bạn có thể rê chuột vào các ảnh thu nhỏ để xem thêm ảnh chụp màn hình và nhấn nút để truy cập GitHub nhé!</p>
+            <p class="projects-subtitle">Dưới đây là một số dự án hấp dẫn mà tôi đã phát triển. Bạn có thể rê chuột vào các ảnh thu nhỏ để xem thêm ảnh chụp màn hình và nhấn nút để truy cập GitHub nhé!</p>
             
             <div class="projects-grid">
                 <!-- Skibidi Game Card -->
                 <div class="project-card">
                     <div class="project-gallery">
                         <div class="main-img-wrapper">
-                            <img class="project-main-img" id="skibidi-main" src="Pictures/skibidi_game.png" alt="Skibidi Game">
+                            <img class="project-main-img" id="skibidi-main" src="Pictures/skibidi_game.png" alt="Skibidi Game" onclick="openModal(this)">
                         </div>
                         <div class="project-thumbnails">
                             <img class="project-thumbnail active" src="Pictures/skibidi_game.png" alt="Skibidi Game Screenshot 1" onmouseenter="document.getElementById('skibidi-main').src='Pictures/skibidi_game.png'; updateActiveThumbnail(this)">
@@ -56,7 +56,7 @@
                 <div class="project-card">
                     <div class="project-gallery">
                         <div class="main-img-wrapper">
-                            <img class="project-main-img" id="neon-main" src="Pictures/neon_hex.png" alt="Neon Hex">
+                            <img class="project-main-img" id="neon-main" src="Pictures/neon_hex.png" alt="Neon Hex" onclick="openModal(this)">
                         </div>
                         <div class="project-thumbnails">
                             <img class="project-thumbnail active" src="Pictures/neon_hex.png" alt="Neon Hex Screenshot 1" onmouseenter="document.getElementById('neon-main').src='Pictures/neon_hex.png'; updateActiveThumbnail(this)">
@@ -81,7 +81,7 @@
                 <div class="project-card">
                     <div class="project-gallery">
                         <div class="main-img-wrapper">
-                            <img class="project-main-img" id="tank-main" src="Pictures/tank_game.png" alt="Tank Game">
+                            <img class="project-main-img" id="tank-main" src="Pictures/tank_game.png" alt="Tank Game" onclick="openModal(this)">
                         </div>
                         <div class="project-thumbnails">
                             <img class="project-thumbnail active" src="Pictures/tank_game.png" alt="Tank Game Screenshot 1" onmouseenter="document.getElementById('tank-main').src='Pictures/tank_game.png'; updateActiveThumbnail(this)">
@@ -106,13 +106,23 @@
         <footer class="footer-contact">
             <h3>Please contact me at: </h3>
             <div class="social-icons">
-                <a href="https://www.linkedin.com/in/t%E1%BA%A5n-ho%C3%A0ng-a94692293/" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i></a>
-                <a href="https://github.com/tatee0815" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i></a>
-                <a href="https://www.instagram.com/hv_.tan/" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.facebook.com/Tatsu.Tatee" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-facebook"></i></a>
+                <a href="https://www.linkedin.com/in/t%E1%BA%A5n-ho%C3%A0ng-a94692293/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://github.com/tatee0815" target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.instagram.com/hv_.tan/" target="_blank" rel="noopener noreferrer" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.facebook.com/Tatsu.Tatee" target="_blank" rel="noopener noreferrer" title="Facebook"><i class="fa-brands fa-facebook"></i></a>
             </div>
             <h4>gmail: htan2582@gmail.com</h4>
         </footer>
+    <div id="img-modal">
+        <div class="img-modal-content">
+            <span class="img-modal-close" style="display: none;">×</span> 
+            <img id="img-modal-img" src="" alt="Enlarged image" />
+            
+            <div id="delete-modal" style="display: none;"></div>
+            <div id="upload-modal" style="display: none;"></div>
+        </div>
+    </div>
+    </div>
     </section>
     <script>
         function updateActiveThumbnail(el) {

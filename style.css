@@ -213,32 +213,6 @@ section{
     text-align: justify;
 }
 
-/* profile.html */
-.profile{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    margin: -10px 10rem;
-}
-
-.profile-content h1{
-    font-size: 5rem;
-    font-weight: 700;
-    line-height: 1.3;
-}
-
-.profile span{
-    color: rgba(255, 13, 130, 1);
-}
-
-.profile-content p{
-    font-size: 2rem;
-    margin-top: 1rem;
-    line-height: 1.5;
-    color: white;
-}
-
 /* projects.html */
 body.projects-page {
     background-color: rgba(225, 106, 255, 1);
@@ -255,7 +229,7 @@ body.projects-page {
     margin: 2rem auto;
     width: 100%;
     max-width: 1200px;
-    padding: 8rem 2rem 5rem 2rem; /* padding trên lớn để không bị header che khuất */
+    padding: 8rem 2rem 5rem 2rem; 
 }
 
 .projects-content {
@@ -292,16 +266,24 @@ body.projects-page {
 .project-card {
     position: relative;
     background: none;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Cố định border mờ ngay từ đầu, thay đổi độ sáng bằng opacity lớp giả nếu cần */
+    border: 1px solid rgba(255, 255, 255, 0.2); 
     border-radius: 2rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    /* Bỏ border-color khỏi transition để tránh repaint */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    will-change: transform, box-shadow;
+    
+    /* Ép buộc tăng tốc phần cứng 3D */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
+/* Lớp kính mờ nền */
 .project-card::before {
     content: "";
     position: absolute;
@@ -311,13 +293,30 @@ body.projects-page {
     backdrop-filter: blur(8px);
     border-radius: inherit;
     z-index: -1;
-    pointer-events: none; /* prevent capturing mouse events */
+    pointer-events: none; 
+}
+
+/* Lớp Đổ bóng nâng cao khi Hover (Chạy bằng GPU) */
+.project-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22), 0 0 25px rgba(255, 255, 255, 0.12);
+    /* Tạo sẵn một viền sáng giả thay cho việc đổi border-color */
+    border: 1px solid rgba(255, 255, 255, 0.35); 
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+    pointer-events: none;
 }
 
 .project-card:hover {
-    transform: translateY(-8px); /* Giảm nhẹ độ dịch chuyển từ -10px xuống -8px giúp cảm giác trượt đầm và mượt mà hơn */
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22), 0 0 25px rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.45);
+    transform: translateY(-8px);
+}
+
+.project-card:hover::after {
+    opacity: 1;
 }
 
 /* Khu vực hiển thị ảnh game */
@@ -341,13 +340,13 @@ body.projects-page {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* Đồng bộ đường cong chuyển động mượt mà và thêm will-change */
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    will-change: transform;
+    will-change: auto;
 }
 
 .project-card:hover .project-main-img {
-    transform: scale(1.03); /* Giảm nhẹ tỉ lệ scale từ 1.04 xuống 1.03 để tránh lag khi vẽ lại */
+    will-change: transform;
+    transform: scale(1.03);
 }
 
 .project-thumbnails {
@@ -362,17 +361,18 @@ body.projects-page {
     object-fit: cover;
     border-radius: 0.8rem;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2); /* Đổi từ transparent sang có màu mờ sẵn */
     opacity: 0.55;
-    /* Chỉ định rõ ràng thuộc tính cần transition để tránh tính toán lại layout không cần thiết */
+    /* Tối ưu hóa các thuộc tính được transition */
     transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-    will-change: transform, opacity;
+    will-change: auto;
 }
 
 .project-thumbnail:hover,
 .project-thumbnail.active {
+    will-change: transform, opacity;
     opacity: 1;
-    border-color: red;
+    border-color: #ff0000;
     transform: translateY(-2px);
 }
 
@@ -399,7 +399,7 @@ body.projects-page {
 }
 
 .project-tags span {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.18); /* Tăng nhẹ độ đục nền */
     border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0.4rem 1rem;
     border-radius: 2rem;
@@ -409,8 +409,7 @@ body.projects-page {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
+    /* Loại bỏ backdrop-filter ở đây để tránh hiện tượng lag lồng nhau (nested blur) */
 }
 
 .project-info p {
