@@ -742,7 +742,8 @@ span{
     background-color: #b71c1c;
 }
 
-#upload-modal-yes {
+#upload-modal-yes,
+#preview-modal-yes {
     background-color: #24b7ff;
     color: white;
     padding: 10px 22px;
@@ -753,12 +754,14 @@ span{
     border: none;
     transition: background 0.18s;
 }
-#upload-modal-yes:hover {
+#upload-modal-yes:hover,
+#preview-modal-yes:hover {
     background-color: #1a8fbf;
 }
 
 #upload-modal-no,
-#delete-modal-no {
+#delete-modal-no,
+#preview-modal-no {
     background-color: #ccc;
     color: #222;
     padding: 10px 22px;
@@ -769,13 +772,15 @@ span{
     transition: background 0.18s;
 }
 #upload-modal-no:hover,
-#delete-modal-no:hover {
+#delete-modal-no:hover,
+#preview-modal-no:hover {
     background-color: #aaa;
     color: #fff;
 }
 
 #upload-modal button,
-#delete-modal button {
+#delete-modal button,
+#preview-modal button {
     margin-top: 10px;
     margin-bottom: 0;
     font-weight: 500;
@@ -788,7 +793,8 @@ span{
     margin-bottom: 20px;
   }
   #delete-modal,
-  #upload-modal {
+  #upload-modal,
+  #preview-modal {
     padding: 10vw 2vw 6vw 2vw;
     border-radius: 12px;
     width: 98vw;
@@ -797,7 +803,8 @@ span{
     font-size: 1.1rem;
   }
   #delete-modal p,
-  #upload-modal p {
+  #upload-modal p,
+  #preview-modal p {
     font-size: 1.2rem;
     margin-bottom: 10px;
   }
@@ -817,8 +824,10 @@ span{
   }
   #delete-modal-yes,
   #upload-modal-yes,
+  #preview-modal-yes,
   #delete-modal-no,
-  #upload-modal-no {
+  #upload-modal-no,
+  #preview-modal-no {
     width: 90vw;
     max-width: 90vw;
     font-size: 1.15rem;
@@ -828,7 +837,8 @@ span{
     display: block;
   }
   #upload-modal button,
-  #delete-modal button {
+  #delete-modal button,
+  #preview-modal button {
     margin-right: 0;
   }
 }
@@ -933,6 +943,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 15px;
   min-height: 400px;

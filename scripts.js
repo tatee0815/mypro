@@ -140,6 +140,9 @@ function openUploadModal(imgSrc, callback) {
   uploadModalError.style.display = 'none';
   uploadModalPasswordInput.focus();
 
+  const cursor = document.querySelector('.cursor');
+  if (cursor) cursor.classList.add('modal-active');
+
   uploadModalYesBtn.onclick = () => {
     const pwd = uploadModalPasswordInput.value;
     if (!pwd || pwd !== FIXED_PASSWORD) {
