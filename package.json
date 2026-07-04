@@ -81,6 +81,7 @@
     "statuses": "^2.0.2",
     "streamsearch": "^1.1.0",
     "string_decoder": "^1.3.0",
+    "supertest": "^7.2.2",
     "toidentifier": "^1.0.1",
     "type-is": "^2.0.1",
     "typedarray": "^0.0.6",

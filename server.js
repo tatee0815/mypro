@@ -64,8 +64,11 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 });
 
 // API xóa ảnh từ Cloudinary
-app.delete('/api/images/:public_id(.*)', async (req, res) => {
-  const public_id = req.params.public_id;
+app.delete('/api/images/{*public_id}', async (req, res) => {
+  let public_id = req.params.public_id;
+  if (Array.isArray(public_id)) {
+    public_id = public_id.join('/');
+  }
   try {
     const result = await cloudinary.uploader.destroy(public_id, { resource_type: 'image' });
     if (result.result === 'ok') {
