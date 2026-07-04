@@ -30,7 +30,8 @@ app.use(express.static('.'));
 app.get('/api/images', async (req, res) => {
   try {
     const result = await cloudinary.api.resources({
-      resource_type: 'image',
+      type: 'upload',
+      prefix: 'somepics/',
       max_results: 100,
     });
     const images = result.resources.map(resource => resource.secure_url);
@@ -49,6 +50,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   try {
     const result = await cloudinary.uploader.upload_stream({
       resource_type: 'image',
+      folder: 'somepics'
     }, (error, result) => {
       if (error) {
         console.error('Lỗi khi upload lên Cloudinary:', error.message);

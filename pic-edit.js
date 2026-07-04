@@ -279,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       if (data.url) {
-        alert("Saved to gallery successfully!");
         closeModal();
         loadAiGallery(); // Refresh gallery
       } else {
@@ -321,7 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
         img.style.height = 'auto';
         img.style.objectFit = 'contain';
         img.style.borderRadius = '10px';
+        img.style.cursor = 'pointer';
         img.loading = 'lazy';
+        
+        img.onclick = () => window.openModal(url);
         
         // Determine model from url
         let modelBadge = 'AI Edit';

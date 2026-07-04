@@ -878,8 +878,8 @@ html, body {
 }
 
 /* --- AI Pic Edit Page Styles --- */
-.pic-edit-page {
-  background-color: #25fa37; /* Elegant deep green */
+body.pic-edit-page {
+  background-color: #4cca40; /* Elegant deep green */
 }
 .editor-container {
   display: flex;
