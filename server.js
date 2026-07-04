@@ -78,6 +78,49 @@ app.delete('/api/images/:public_id', async (req, res) => {
   }
 });
 
+// API lấy danh sách ảnh AI đã xử lý từ thư mục AI_Edits
+app.get('/api/images-ai-edit', async (req, res) => {
+  try {
+    const result = await cloudinary.api.resources({
+      type: 'upload',
+      prefix: 'AI_Edits/',
+      max_results: 100,
+    });
+    const images = result.resources.map(resource => resource.secure_url);
+    res.json(images);
+  } catch (error) {
+    console.error('Lỗi khi lấy ảnh AI từ Cloudinary:', error.message);
+    res.status(500).json({ error: 'Không thể lấy danh sách ảnh' });
+  }
+});
+
+// API upload ảnh AI đã xử lý lên Cloudinary (thư mục riêng theo model)
+app.post('/api/upload-ai-edit', upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Không có file được tải lên' });
+  }
+
+  // Lấy tên model từ request body, loại bỏ đuôi .onnx nếu có
+  const modelName = req.body.model || 'unknown';
+  const folderName = modelName.replace('.onnx', '');
+
+  try {
+    const result = await cloudinary.uploader.upload_stream({
+      resource_type: 'image',
+      folder: `AI_Edits/${folderName}`
+    }, (error, result) => {
+      if (error) {
+        console.error('Lỗi khi upload lên Cloudinary:', error.message);
+        return res.status(500).json({ error: 'Upload thất bại' });
+      }
+      res.json({ url: result.secure_url });
+    }).end(req.file.buffer);
+  } catch (error) {
+    console.error('Lỗi khi upload lên Cloudinary:', error.message);
+    res.status(500).json({ error: 'Upload thất bại' });
+  }
+});
+
 // Khởi động server
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);

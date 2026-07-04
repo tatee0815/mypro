@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <!-- Include ONNX Runtime Web -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <title>Tatee Website - AI Pic Edit</title>
+</head>
+<body class="somepics-page pic-edit-page">
+  <div class="cursor"></div>
+  <header>
+    <a href="#" class="greets">Welcome to my website</a>
+    <button class="menu-toggle" aria-label="Open Menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="profile.html">Profile</a>
+      <a href="projects.html">Projects</a>
+      <a href="somepics.html">Some Pics</a>
+      <a href="pic-edit.html" class="active">Pic Edit</a>
+    </nav>
+  </header>
+  
+  <section class="somepics-section">
+    <h2>Transform your photos with AI Models.</h2>
+    
+    <div class="editor-container">
+      <div class="editor-controls">
+        <div class="model-select-wrapper">
+            <label for="model-select">Choose AI Model:</label>
+            <select id="model-select" class="custom-select">
+            <option value="AnimeGANv3_Hayao_36.onnx">Hayao</option>
+            <option value="AnimeGANv3_large_Ghibli_c1_e299.onnx">Ghibli</option>
+            <option value="AnimeGANv3_PortraitSketch_25.onnx">Sketch</option>
+            </select>
+        </div>
+        
+        <form id="upload-form" class="custom-upload-form">
+          <label for="image-input" class="custom-file-label">
+              <i class="fa-solid fa-plus"></i> Select Image
+              <input type="file" id="image-input" accept="image/*" required hidden>
+          </label>
+        </form>
+        
+        <button id="btn-convert" class="btn-action" disabled>Convert to AI</button>
+        <button id="btn-save" class="btn-action" disabled>Save to Gallery</button>
+      </div>
+
+      <div class="editor-display">
+        <div id="loading-overlay" class="loading-overlay" style="display:none;">
+           <div class="spinner"></div>
+           <p>AI is processing...</p>
+        </div>
+        <!-- Wrap canvas in a container to enforce max sizes -->
+        <div class="canvas-wrapper" style="display:none;" id="canvas-wrapper">
+          <canvas id="editor-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <hr class="divider">
+    <h2 class="gallery-title">AI Edited Gallery</h2>
+    <div id="ai-gallery" class="gallery-grid"></div>
+
+    <!-- Modals (Reusing somepics style modal structure) -->
+    <div id="img-modal" class="custom-img-modal" style="display:none;">
+      <div class="img-modal-content">
+        <span class="img-modal-close" id="img-modal-close" style="display: none;">×</span>
+        
+        <!-- Preview before processing -->
+        <div id="preview-modal" class="modal-content" style="display:none;">
+            <p>Use this photo for AI processing?</p>
+            <img id="preview-modal-img" src="" style="max-width:100%; max-height: 50vh; object-fit: contain; margin-bottom:10px; border-radius: 10px;" />
+            <button id="preview-modal-yes">Confirm</button>
+            <button id="preview-modal-no">Cancel</button>
+        </div>
+
+        <!-- Upload to Gallery -->
+        <div id="upload-modal" class="modal-content" style="display:none;">
+            <p>Save this AI photo to Gallery?</p>
+            <img id="upload-modal-preview-img" src="" style="max-width:100%; max-height: 50vh; object-fit: contain; margin-bottom:10px; border-radius: 10px;" />
+            <button id="upload-modal-yes">Confirm</button>
+            <button id="upload-modal-no">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer-contact">
+      <h3>Please contact me at: </h3>
+      <div class="social-icons">
+        <a href="https://www.linkedin.com/in/t%E1%BA%A5n-ho%C3%A0ng-a94692293/" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-linkedin"></i></a>
+        <a href="https://github.com/tatee0815" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i></a>
+        <a href="https://www.instagram.com/hv_.tan/" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/Tatsu.Tatee" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-facebook"></i></a>
+      </div>
+      <h4>gmail: htan2582@gmail.com</h4>
+    </footer>
+  </section>
+  <script src="scripts.js"></script>
+  <script src="pic-edit.js"></script>
+</body>
+</html>
