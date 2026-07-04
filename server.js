@@ -29,11 +29,10 @@ app.use(express.static('.'));
 // API lấy danh sách ảnh từ Cloudinary
 app.get('/api/images', async (req, res) => {
   try {
-    const result = await cloudinary.api.resources({
-      type: 'upload',
-      prefix: 'somepics/',
-      max_results: 100,
-    });
+    const result = await cloudinary.search
+      .expression('folder:somepics')
+      .max_results(100)
+      .execute();
     const images = result.resources.map(resource => resource.secure_url);
     res.json(images);
   } catch (error) {
