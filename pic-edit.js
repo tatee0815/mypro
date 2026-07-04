@@ -298,6 +298,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Gallery Logic ---
+  window.deleteAiImage = function(publicId) {
+    if (window.openDeleteModal) {
+      window.openDeleteModal(async () => {
+        try {
+          const res = await fetch(`/api/images/${encodeURIComponent(publicId)}`, {
+            method: 'DELETE',
+          });
+          const responseData = await res.json();
+          if (!res.ok) {
+            throw new Error(`Xóa thất bại: ${responseData.error || res.statusText}`);
+          }
+          await loadAiGallery(); // Làm mới gallery AI
+        } catch (error) {
+          console.error('Lỗi khi xóa ảnh AI:', error.message);
+          alert('Không thể xóa ảnh. Lỗi: ' + error.message);
+        }
+      });
+    }
+  };
+
   async function loadAiGallery() {
     try {
       const response = await fetch('/api/images-ai-edit');
@@ -344,8 +364,34 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.style.fontWeight = 'bold';
         badge.style.border = '1px solid rgba(255,255,255,0.2)';
         
+        // Extract publicId (including folder path: AI_Edits/Hayao/xyz)
+        const parts = url.split('/');
+        const uploadIndex = parts.indexOf('upload');
+        const pathAfterUpload = parts.slice(uploadIndex + 1);
+        const publicId = (pathAfterUpload[0].startsWith('v') ? pathAfterUpload.slice(1) : pathAfterUpload).join('/').split('.')[0];
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '×';
+        deleteBtn.style.position = 'absolute';
+        deleteBtn.style.top = '10px';
+        deleteBtn.style.left = '10px';
+        deleteBtn.style.background = 'red';
+        deleteBtn.style.color = 'white';
+        deleteBtn.style.border = 'none';
+        deleteBtn.style.borderRadius = '50%';
+        deleteBtn.style.width = '24px';
+        deleteBtn.style.height = '24px';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.zIndex = '10'; // Ensure it's above the image
+        
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation(); // Prevent opening the image modal
+          if(window.deleteAiImage) window.deleteAiImage(publicId);
+        };
+        
         wrapper.appendChild(img);
         wrapper.appendChild(badge);
+        wrapper.appendChild(deleteBtn);
         aiGallery.appendChild(wrapper);
       });
     } catch (err) {

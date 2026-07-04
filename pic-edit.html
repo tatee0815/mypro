@@ -71,6 +71,16 @@
     <div id="img-modal">
       <div class="img-modal-content">
         <span class="img-modal-close" id="img-modal-close" style="display: none;">×</span>
+        <img id="img-modal-img" src="" alt="preview" style="display:none;">
+
+        <!-- Delete -->
+        <div id="delete-modal" class="modal-content" style="display:none;">
+            <p>Delete this photo?</p>
+            <input type="password" id="delete-modal-password-input" placeholder="Type password" />
+            <div id="delete-modal-error" style="color:red;display:none;">Wrong password!</div>
+            <button id="delete-modal-yes">Confirm</button>
+            <button id="delete-modal-no">Cancel</button>
+        </div>
         
         <!-- Preview before processing -->
         <div id="preview-modal" class="modal-content" style="display:none;">
