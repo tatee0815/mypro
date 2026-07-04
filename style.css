@@ -665,7 +665,8 @@ span{
 }
 
 #delete-modal,
-#upload-modal {
+#upload-modal,
+#preview-modal {
     text-align: center;
     background: white;
     padding: 28px 18px 22px 18px;
@@ -685,7 +686,8 @@ span{
     font-size: 1.5rem;
     font-weight: 500;
 }
-#upload-modal p {
+#upload-modal p,
+#preview-modal p {
     color: #24b7ff;
     margin-bottom: 14px;
     font-size: 1.5rem;
@@ -718,6 +720,16 @@ span{
 }
 
 #upload-modal-preview-img {
+    display: block;
+    max-height: 500px;
+    margin: 0 auto 14px auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    object-fit: contain;
+    background: #f8f8f8;
+}
+
+#preview-modal-img {
     display: block;
     max-height: 500px;
     margin: 0 auto 14px auto;
@@ -867,9 +879,8 @@ html, body {
 
 /* --- AI Pic Edit Page Styles --- */
 .pic-edit-page {
-  /* specific to pic edit page */
+  background-color: #25fa37; /* Elegant deep green */
 }
-
 .editor-container {
   display: flex;
   flex-direction: row;
@@ -1011,4 +1022,4 @@ html, body {
   .editor-container {
     flex-direction: column;
   }
-}
+}

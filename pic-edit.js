@@ -26,18 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Modal Logic ---
   function openModal(modalContentElement) {
-    imgModal.style.display = 'flex';
+    imgModal.classList.add('active');
     modalClose.style.display = 'block';
     previewModal.style.display = 'none';
     uploadModal.style.display = 'none';
-    modalContentElement.style.display = 'flex';
+    modalContentElement.style.display = 'block';
     
     const cursor = document.querySelector('.cursor');
     if (cursor) cursor.classList.add('modal-active');
   }
 
   function closeModal() {
-    imgModal.style.display = 'none';
+    imgModal.classList.remove('active');
     modalClose.style.display = 'none';
     previewModal.style.display = 'none';
     uploadModal.style.display = 'none';
@@ -218,21 +218,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
     
-    const float32Data = new Float32Array(3 * width * height);
+    const float32Data = new Float32Array(width * height * 3);
     
-    // AnimeGAN usually expects shape [1, 3, H, W]
+    // AnimeGANv3 ONNX models usually expect shape [1, H, W, 3]
     // Normalized to [-1, 1] using: (val / 127.5) - 1.0
     for (let i = 0; i < width * height; i++) {
       let r = data[i * 4];
       let g = data[i * 4 + 1];
       let b = data[i * 4 + 2];
       
-      float32Data[i] = (r / 127.5) - 1.0;
-      float32Data[width * height + i] = (g / 127.5) - 1.0;
-      float32Data[2 * width * height + i] = (b / 127.5) - 1.0;
+      float32Data[i * 3 + 0] = (r / 127.5) - 1.0;
+      float32Data[i * 3 + 1] = (g / 127.5) - 1.0;
+      float32Data[i * 3 + 2] = (b / 127.5) - 1.0;
     }
     
-    return new ort.Tensor('float32', float32Data, [1, 3, height, width]);
+    return new ort.Tensor('float32', float32Data, [1, height, width, 3]);
   }
 
   function postprocess(tensor, canvas, width, height) {
@@ -240,12 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     const imgData = ctx.createImageData(width, height);
     
-    // Output shape is [1, 3, H, W] in [-1, 1]
+    // Output shape is [1, H, W, 3] in [-1, 1]
     // Denormalize: (val + 1.0) * 127.5
     for (let i = 0; i < width * height; i++) {
-      let r = (data[i] + 1.0) * 127.5;
-      let g = (data[width * height + i] + 1.0) * 127.5;
-      let b = (data[2 * width * height + i] + 1.0) * 127.5;
+      let r = (data[i * 3 + 0] + 1.0) * 127.5;
+      let g = (data[i * 3 + 1] + 1.0) * 127.5;
+      let b = (data[i * 3 + 2] + 1.0) * 127.5;
       
       imgData.data[i * 4] = Math.max(0, Math.min(255, r));
       imgData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
