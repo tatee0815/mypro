@@ -3,6 +3,50 @@ const nav = document.querySelector('nav');
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
 const FIXED_PASSWORD = '0815'; // Chuyển sang server-side cho production
 
+// Global AI Processing State
+window.aiState = {
+    worker: null, // Will be initialized lazily or explicitly
+    isProcessing: false,
+    progress: { percent: 0, text: '' },
+    originalImage: null,
+    finalCanvasData: null,
+    onMessageCallback: null // Used by pic-edit.js to hook into live events
+};
+
+// Global AI Badge Injection
+document.addEventListener('DOMContentLoaded', () => {
+    const badgeHtml = `
+      <div id="global-ai-badge" style="display: none; position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.85); color: white; padding: 15px 25px; border-radius: 30px; z-index: 99999; border: 2px solid #24b7ff; cursor: pointer; box-shadow: 0 0 15px rgba(36,183,255,0.7); font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 500; align-items: center; gap: 15px;">
+        <i class="fa-solid fa-microchip fa-spin" style="color: #00ffcc; font-size: 1.5rem;"></i>
+        <span id="global-ai-badge-text">AI Processing... 0%</span>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', badgeHtml);
+    
+    document.getElementById('global-ai-badge').addEventListener('click', () => {
+        if (!window.location.href.includes('pic-edit.html')) {
+            // Navigate back to pic-edit using the existing SPA router
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => {
+                if(link.getAttribute('href') === 'pic-edit.html') link.click();
+            });
+        }
+    });
+});
+
+window.updateGlobalAiProgress = (percent, text) => {
+    window.aiState.progress = { percent, text };
+    
+    const badge = document.getElementById('global-ai-badge');
+    const badgeText = document.getElementById('global-ai-badge-text');
+    
+    if (window.aiState.isProcessing) {
+        if (badge) badge.style.display = 'flex';
+        if (badgeText) badgeText.innerText = `AI Processing... ${percent}%`;
+    } else {
+        if (badge) badge.style.display = 'none';
+    }
+};
 // Global Modal getters
 function getModalEls() {
   return {
@@ -383,12 +427,6 @@ window.closeModal = closeModal;
       
       if (url.includes('pic-edit.html')) {
         // Load ONNX runtime dynamically if not present
-        if (!document.querySelector('script[src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"]')) {
-          const ortScript = document.createElement('script');
-          ortScript.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js';
-          document.head.appendChild(ortScript);
-        }
-
         if (!document.querySelector('script[src="pic-edit.js"]')) {
           const script = document.createElement('script');
           script.src = 'pic-edit.js';

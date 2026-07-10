@@ -128,69 +128,7 @@ app.post('/api/upload-ai-edit', upload.single('image'), async (req, res) => {
   }
 });
 
-// API gọi Python script để upscale ảnh (Upscayl/ncnn)
-app.post('/api/upscayl', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Không có file được tải lên' });
-  }
 
-  const modelName = req.body.model || 'realesrgan-x4plus'; // Tên model mặc định
-  
-  // Tạo thư mục temp nếu chưa có
-  const tempDir = path.join(__dirname, 'temp');
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
-  }
-
-  // Tạo tên file ngẫu nhiên
-  const filename = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  const inputPath = path.join(tempDir, filename + '-in.png');
-  const outputPath = path.join(tempDir, filename + '-out.png');
-
-  // Lưu file từ buffer ra ổ cứng
-  fs.writeFileSync(inputPath, req.file.buffer);
-
-  // Gọi trực tiếp file thực thi C++ (NCNN Vulkan)
-  const exeName = process.platform === 'win32' ? 'realesrgan-ncnn-vulkan.exe' : 'realesrgan-ncnn-vulkan';
-  const exePath = path.join(__dirname, 'bin', exeName);
-
-  const ncnnProcess = spawn(exePath, [
-    '-i', inputPath,
-    '-o', outputPath,
-    '-n', modelName,
-    '-m', path.join(__dirname, 'models')
-  ]);
-
-  let processError = '';
-
-  ncnnProcess.stderr.on('data', (data) => {
-    processError += data.toString();
-    console.error(`NCNN Stderr: ${data}`);
-  });
-
-  ncnnProcess.on('close', async (code) => {
-    if (code !== 0) {
-      // Xóa file temp
-      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      return res.status(500).json({ error: 'Lỗi khi xử lý qua NCNN Engine', details: processError });
-    }
-
-    // Trả file ảnh trực tiếp về cho Frontend thay vì tự động upload Cloudinary
-    if (fs.existsSync(outputPath)) {
-      res.sendFile(outputPath, (err) => {
-        if (err) {
-          console.error('Lỗi khi gửi file về client:', err);
-        }
-        // Cleanup temp files sau khi gửi xong
-        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-      });
-    } else {
-      res.status(500).json({ error: 'Không tìm thấy file output từ NCNN' });
-      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-    }
-  });
-});
 
 // Khởi động server
 app.listen(PORT, () => {

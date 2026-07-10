@@ -887,7 +887,8 @@ body.pic-edit-page {
   display: flex;
   flex-direction: row;
   gap: 30px;
-  max-width: 1100px;
+  max-width: 500px;
+  transition: max-width 0.4s ease;
   margin: 0 auto 40px auto;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
@@ -895,6 +896,10 @@ body.pic-edit-page {
   border-radius: 20px;
   padding: 30px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.editor-container.has-image {
+  max-width: 1100px;
 }
 
 .editor-controls {
@@ -936,6 +941,10 @@ body.pic-edit-page {
 }
 
 .btn-action {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
   padding: 15px;
   font-size: 1.2rem;
   border: none;
@@ -959,16 +968,18 @@ body.pic-edit-page {
 }
 
 .editor-display {
+  display: none;
   flex: 2;
-  display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  background: rgba(0, 0, 0, 0.3);
+  background: transparent;
   border-radius: 15px;
-  min-height: 400px;
-  position: relative;
   overflow: hidden;
+}
+
+.editor-container.has-image .editor-display {
+  display: flex;
 }
 
 .canvas-wrapper {

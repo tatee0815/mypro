@@ -26,6 +26,53 @@ window.initPicEdit = function () {
   // Load gallery initially
   loadAiGallery();
 
+  // --- Global State Restoration ---
+  if (window.aiState) {
+    if (window.aiState.isProcessing) {
+      canvasWrapper.style.display = 'flex';
+      document.querySelector('.editor-container').classList.add('has-image');
+      loadingOverlay.style.display = 'flex';
+      btnConvert.disabled = true;
+      if (window.aiState.originalImgElement) {
+         originalImgElement.src = window.aiState.originalImgElement.src;
+         editorCanvas.width = originalImgElement.width;
+         editorCanvas.height = originalImgElement.height;
+         ctx.drawImage(originalImgElement, 0, 0);
+      }
+      
+      // Setup progress callback to update local UI while processing
+      window.aiState.onMessageCallback = (percent, text, previewCanvas) => {
+        const fill = document.getElementById('progress-bar-fill');
+        const textEl = document.getElementById('loading-text');
+        if (fill) fill.style.width = percent + '%';
+        if (textEl) textEl.innerText = text;
+        
+        // Live preview of stitched canvas
+        if (previewCanvas) {
+           editorCanvas.width = previewCanvas.width;
+           editorCanvas.height = previewCanvas.height;
+           ctx.drawImage(previewCanvas, 0, 0);
+        }
+      };
+      
+      // Fire it once immediately to sync
+      window.aiState.onMessageCallback(window.aiState.progress.percent, window.aiState.progress.text, window.aiState.stitchedCanvas);
+      
+    } else if (window.aiState.finalCanvasData) {
+      // Completed processing while away
+      canvasWrapper.style.display = 'flex';
+      document.querySelector('.editor-container').classList.add('has-image');
+      editorCanvas.width = window.aiState.finalCanvasData.width;
+      editorCanvas.height = window.aiState.finalCanvasData.height;
+      ctx.drawImage(window.aiState.finalCanvasData, 0, 0);
+      btnSave.disabled = false;
+      // Note: originalImgElement is needed if they want to re-convert
+      if (window.aiState.originalImgElement) {
+         originalImgElement.src = window.aiState.originalImgElement.src;
+      }
+    }
+  }
+
   // --- Modal Logic ---
   function openModal(modalContentElement) {
     imgModal.classList.add('active');
@@ -70,6 +117,7 @@ window.initPicEdit = function () {
     originalImgElement.src = previewModalImg.src;
     originalImgElement.onload = () => {
       canvasWrapper.style.display = 'flex';
+      document.querySelector('.editor-container').classList.add('has-image');
       editorCanvas.width = originalImgElement.width;
       editorCanvas.height = originalImgElement.height;
       ctx.drawImage(originalImgElement, 0, 0);
@@ -92,64 +140,226 @@ window.initPicEdit = function () {
     loadingOverlay.style.display = 'flex';
     btnConvert.disabled = true;
 
+    // Global State Registration
+    if (window.aiState) {
+        window.aiState.isProcessing = true;
+        window.aiState.originalImgElement = originalImgElement;
+        window.aiState.finalCanvasData = null; // reset
+    }
+
     // Helper for progress UI
     function updateProgress(percent, text) {
+      if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(percent, text);
+      
       const fill = document.getElementById('progress-bar-fill');
       const textEl = document.getElementById('loading-text');
       if (fill) fill.style.width = percent + '%';
       if (textEl) textEl.innerText = text;
+      
+      if (window.aiState && window.aiState.onMessageCallback) {
+          // Trigger any external UI hooks if the user navigated back
+          window.aiState.onMessageCallback(percent, text, window.aiState.stitchedCanvas);
+      }
     }
 
     try {
       updateProgress(10, 'Initializing AI engine...');
 
-      if (selectedModel.includes('.onnx')) {
-        // Determine optimal size for ONNX model (multiple of 32, max dimension ~512 to prevent OOM in WASM)
-        let maxDim = 512;
-        let scale = Math.min(maxDim / originalImgElement.width, maxDim / originalImgElement.height);
+        const isRealESRGAN = selectedModel.includes('real_esrgan');
+        const upscaleFactor = isRealESRGAN ? 2 : 1; // Strictly lock to 2x multiplier for stability
+        
+        const MAX_DIMENSION = 1080; // Restrict max processing resolution to prevent memory overflow before tiling
+        let scale = Math.min(MAX_DIMENSION / originalImgElement.width, MAX_DIMENSION / originalImgElement.height);
         if (scale > 1) scale = 1;
 
         let newW = Math.floor(originalImgElement.width * scale);
         let newH = Math.floor(originalImgElement.height * scale);
-        newW = newW - (newW % 32) || 32;
-        newH = newH - (newH % 32) || 32;
+        
+        // Ensure dimensions are multiples of 32 for CNN models (like AnimeGAN) to prevent tensor shape mismatch
+        newW = newW - (newW % 32);
+        newH = newH - (newH % 32);
+        
+        // If image is too small after modulo, enforce a minimum 32x32 size
+        if (newW < 32) newW = 32;
+        if (newH < 32) newH = 32;
+        
+        if (scale < 1) {
+            console.log(`[AI Filter] Resized image from ${originalImgElement.width}x${originalImgElement.height} to ${newW}x${newH}`);
+        }
 
-        // Prepare offscreen canvas for AI processing
-        const offCanvas = document.createElement('canvas');
+        const finalW = newW * upscaleFactor;
+        const finalH = newH * upscaleFactor;
+
+        // Prepare offscreen canvas for source image
+        let offCanvas = document.createElement('canvas');
         offCanvas.width = newW;
         offCanvas.height = newH;
-        const offCtx = offCanvas.getContext('2d');
+        let offCtx = offCanvas.getContext('2d');
         offCtx.drawImage(originalImgElement, 0, 0, newW, newH);
 
+        // Prepare final stitched canvas
+        const stitchedCanvas = document.createElement('canvas');
+        stitchedCanvas.width = finalW;
+        stitchedCanvas.height = finalH;
+        const stitchedCtx = stitchedCanvas.getContext('2d', { willReadFrequently: true });
+        
+        if (window.aiState) {
+            window.aiState.stitchedCanvas = stitchedCanvas; // Store globally for live preview restoration
+        }
+
         try {
-          updateProgress(30, 'Loading model weights...');
-          ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-          const session = await ort.InferenceSession.create(`./models/${selectedModel}`, { executionProviders: ['wasm'] });
-          console.log(`Model ${selectedModel} loaded successfully. Running inference...`);
+          updateProgress(10, 'Initializing AI Worker...');
+          
+          if (!window.aiState.worker) {
+              window.aiState.worker = new Worker('ai-worker.js');
+          }
+          const worker = window.aiState.worker;
+          
+          await new Promise((resolve, reject) => {
+              worker.onmessage = (e) => {
+                  if (e.data.type === 'init_done') {
+                      const hwStatus = document.getElementById('hardware-status');
+                      if (hwStatus) {
+                          if (e.data.provider === 'wasm') {
+                              hwStatus.innerText = "Running in power-save mode (CPU). Processing might be slower on this device.";
+                          } else {
+                              hwStatus.innerText = "Accelerated by GPU.";
+                          }
+                      }
+                      resolve();
+                  }
+                  if (e.data.type === 'error') reject(new Error(e.data.error));
+              };
+              worker.postMessage({ type: 'init', modelName: selectedModel, isRealESRGAN });
+          });
 
-          updateProgress(50, 'Preparing image tensor...');
-          const inputTensor = preprocess(offCanvas, newW, newH);
-          const inputName = session.inputNames[0];
-          const feeds = {};
-          feeds[inputName] = inputTensor;
+          if (isRealESRGAN) {
+              // Tiling Algorithm with Overlap (Seamless Tiling)
+              const tileSize = 256;
+              const margin = 32;
+              
+              const cols = Math.ceil(newW / tileSize);
+              const rows = Math.ceil(newH / tileSize);
+              const totalTiles = cols * rows;
+              let currentTile = 0;
+              
+              // Pre-read full source image data for fast edge clamping extraction
+              const sourceImgData = offCtx.getImageData(0, 0, newW, newH).data;
 
-          // Wait briefly for UI to catch up
+              for (let y = 0; y < rows; y++) {
+                  for (let x = 0; x < cols; x++) {
+                      currentTile++;
+                      updateProgress(20 + Math.floor((currentTile / totalTiles) * 70), `Processing tile ${currentTile} of ${totalTiles}...`);
+                      
+                      const startX = x * tileSize;
+                      const startY = y * tileSize;
+                      
+                      const padW = tileSize + margin * 2;
+                      const padH = tileSize + margin * 2;
+                      
+                      const tileImgData = new ImageData(padW, padH);
+                      const destData = tileImgData.data;
+                      
+                      // Extract with clamp padding
+                      for (let ty = 0; ty < padH; ty++) {
+                          for (let tx = 0; tx < padW; tx++) {
+                              let srcY = Math.max(0, Math.min(newH - 1, startY - margin + ty));
+                              let srcX = Math.max(0, Math.min(newW - 1, startX - margin + tx));
+                              
+                              let destIdx = (ty * padW + tx) * 4;
+                              let srcIdx = (srcY * newW + srcX) * 4;
+                              
+                              destData[destIdx] = sourceImgData[srcIdx];
+                              destData[destIdx+1] = sourceImgData[srcIdx+1];
+                              destData[destIdx+2] = sourceImgData[srcIdx+2];
+                              destData[destIdx+3] = sourceImgData[srcIdx+3];
+                          }
+                      }
+                      
+                      // Send to worker
+                      const tileResult = await new Promise((resolve, reject) => {
+                          worker.onmessage = (e) => {
+                              if (e.data.type === 'process_done') resolve(e.data);
+                              if (e.data.type === 'error') reject(new Error(e.data.error));
+                          };
+                          worker.postMessage({
+                              type: 'process',
+                              modelName: selectedModel,
+                              isRealESRGAN,
+                              tileData: tileImgData.data,
+                              width: padW,
+                              height: padH,
+                              tileId: currentTile
+                          }, [tileImgData.data.buffer]);
+                      });
+                      
+                      // Convert returned data to ImageData
+                      const upscaledTileData = new ImageData(
+                          new Uint8ClampedArray(tileResult.outputRgba),
+                          tileResult.outW,
+                          tileResult.outH
+                      );
+                      
+                      const tempResultCanvas = document.createElement('canvas');
+                      tempResultCanvas.width = tileResult.outW;
+                      tempResultCanvas.height = tileResult.outH;
+                      const tempResultCtx = tempResultCanvas.getContext('2d');
+                      tempResultCtx.putImageData(upscaledTileData, 0, 0);
+                      
+                      // Calculate crop (Discard Edges)
+                      const scaledMargin = margin * upscaleFactor;
+                      const scaledTileSize = tileSize * upscaleFactor;
+                      
+                      // Stitch: Draw only the core onto stitchedCanvas
+                      stitchedCtx.drawImage(
+                          tempResultCanvas,
+                          scaledMargin, scaledMargin, scaledTileSize, scaledTileSize, // Source core
+                          startX * upscaleFactor, startY * upscaleFactor, scaledTileSize, scaledTileSize // Dest coordinates
+                      );
+                  }
+              }
+          } else {
+              // Direct processing for non-RealESRGAN models
+              updateProgress(50, 'Processing full image...');
+              const fullImgData = offCtx.getImageData(0, 0, newW, newH);
+              
+              const result = await new Promise((resolve, reject) => {
+                  worker.onmessage = (e) => {
+                      if (e.data.type === 'process_done') resolve(e.data);
+                      if (e.data.type === 'error') reject(new Error(e.data.error));
+                  };
+                  worker.postMessage({
+                      type: 'process',
+                      modelName: selectedModel,
+                      isRealESRGAN,
+                      tileData: fullImgData.data,
+                      width: newW,
+                      height: newH,
+                      tileId: 1
+                  }, [fullImgData.data.buffer]);
+              });
+              
+              const upscaledData = new ImageData(
+                  new Uint8ClampedArray(result.outputRgba),
+                  result.outW,
+                  result.outH
+              );
+              stitchedCtx.putImageData(upscaledData, 0, 0);
+          }
+          // Removed worker.terminate() so it persists in the background for future runs.
+
+          updateProgress(95, 'Rendering final image...');
           await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Override offCanvas with the final stitched result
+          offCanvas = stitchedCanvas;
+          offCtx = stitchedCtx;
 
-          updateProgress(75, 'Running AI inference (this may take a moment)...');
-          const results = await session.run(feeds);
-          const outputName = session.outputNames[0];
-          const outputTensor = results[outputName];
-
-          updateProgress(90, 'Rendering output image...');
-          await new Promise(resolve => setTimeout(resolve, 50));
-          postprocess(outputTensor, offCanvas, newW, newH);
           console.log(`Inference completed.`);
-
           updateProgress(100, 'Done!');
         } catch (err) {
-          console.warn("ONNX inference failed. Running fallback demo filter to simulate processing.", err);
-          updateProgress(60, 'ONNX failed, falling back to demo filter...');
+          console.warn("ONNX Worker inference failed. Running fallback demo filter.", err);
+          updateProgress(60, 'AI failed, falling back to demo filter...');
           await new Promise(resolve => setTimeout(resolve, 1500));
           applyDemoFilter(offCtx, offCanvas.width, offCanvas.height, selectedModel);
           updateProgress(100, 'Done!');
@@ -163,60 +373,13 @@ window.initPicEdit = function () {
         ctx.drawImage(originalImgElement, 0, 0);
 
         // Draw edited on right (scale back from model size to original size)
-        ctx.drawImage(offCanvas, 0, 0, newW, newH, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
+        ctx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
 
         // Lưu ảnh nguyên gốc từ AI (không bị ghép viền) để chuẩn bị upload
         offCanvas.toBlob((b) => {
           currentProcessedBlob = b;
           btnSave.disabled = false;
         }, 'image/jpeg', 0.9);
-      } else {
-        // NCNN Backend Pipeline (Upscayl / Real-ESRGAN)
-        updateProgress(30, 'Uploading image to AI Engine...');
-        const formData = new FormData();
-        formData.append('image', currentImageBlob);
-        formData.append('model', selectedModel);
-
-        const response = await fetch('/api/upscayl', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          let errText = 'AI Engine failed to process the image.';
-          try {
-            const errData = await response.json();
-            errText = errData.error || errText;
-          } catch (e) { }
-          throw new Error(errText);
-        }
-
-        const blob = await response.blob();
-
-        // Lưu blob chất lượng cao gốc từ AI để chuẩn bị upload lên Cloudinary
-        currentProcessedBlob = blob;
-        btnSave.disabled = false;
-
-        const resultUrl = URL.createObjectURL(blob);
-
-        updateProgress(80, 'Loading upscaled image...');
-        const upscaledImg = new Image();
-        upscaledImg.src = resultUrl;
-        await new Promise((resolve, reject) => {
-          upscaledImg.onload = resolve;
-          upscaledImg.onerror = reject;
-        });
-
-        // Stitch original and upscaled images side by side
-        editorCanvas.width = originalImgElement.width * 2;
-        editorCanvas.height = originalImgElement.height;
-
-        ctx.drawImage(originalImgElement, 0, 0);
-        // Draw upscaled image on right, shrinking/stretching it to match height if necessary
-        ctx.drawImage(upscaledImg, 0, 0, upscaledImg.width, upscaledImg.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
-
-        updateProgress(100, 'Done!');
-      }
 
       // Add a dividing line in the middle
       ctx.beginPath();
@@ -225,8 +388,6 @@ window.initPicEdit = function () {
       ctx.strokeStyle = "white";
       ctx.lineWidth = Math.max(2, originalImgElement.width * 0.01); // responsive line width
       ctx.stroke();
-
-      // (Đã chuyển logic lưu blob vào từng luồng xử lý riêng ở trên để giữ độ phân giải gốc)
 
       // Lưu ảnh ghép (Compare Mode) để chuẩn bị upload nếu user chọn chế độ này
       editorCanvas.toBlob((b) => {
@@ -244,7 +405,24 @@ window.initPicEdit = function () {
       // reset progress for next time
       const fill = document.getElementById('progress-bar-fill');
       if (fill) fill.style.width = '0%';
+      const hwStatus = document.getElementById('hardware-status');
+      if (hwStatus) hwStatus.innerText = '';
       btnConvert.disabled = false;
+      
+      // Clear global state
+      if (window.aiState) {
+          window.aiState.isProcessing = false;
+          window.aiState.onMessageCallback = null;
+          
+          // Store the final fully stitched image for restoration
+          const finalStateCanvas = document.createElement('canvas');
+          finalStateCanvas.width = editorCanvas.width;
+          finalStateCanvas.height = editorCanvas.height;
+          finalStateCanvas.getContext('2d').drawImage(editorCanvas, 0, 0);
+          window.aiState.finalCanvasData = finalStateCanvas;
+          
+          if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(0, '');
+      }
     }
   };
 
@@ -270,49 +448,6 @@ window.initPicEdit = function () {
       }
     }
     context.putImageData(imgData, 0, 0);
-  }
-
-  // --- Tensor Pre-processing & Post-processing ---
-  function preprocess(canvas, width, height) {
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.getImageData(0, 0, width, height);
-    const data = imgData.data;
-
-    const float32Data = new Float32Array(width * height * 3);
-
-    // AnimeGANv3 ONNX models usually expect shape [1, H, W, 3]
-    // Normalized to [-1, 1] using: (val / 127.5) - 1.0
-    for (let i = 0; i < width * height; i++) {
-      let r = data[i * 4];
-      let g = data[i * 4 + 1];
-      let b = data[i * 4 + 2];
-
-      float32Data[i * 3 + 0] = (r / 127.5) - 1.0;
-      float32Data[i * 3 + 1] = (g / 127.5) - 1.0;
-      float32Data[i * 3 + 2] = (b / 127.5) - 1.0;
-    }
-
-    return new ort.Tensor('float32', float32Data, [1, height, width, 3]);
-  }
-
-  function postprocess(tensor, canvas, width, height) {
-    const data = tensor.data;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(width, height);
-
-    // Output shape is [1, H, W, 3] in [-1, 1]
-    // Denormalize: (val + 1.0) * 127.5
-    for (let i = 0; i < width * height; i++) {
-      let r = (data[i * 3 + 0] + 1.0) * 127.5;
-      let g = (data[i * 3 + 1] + 1.0) * 127.5;
-      let b = (data[i * 3 + 2] + 1.0) * 127.5;
-
-      imgData.data[i * 4] = Math.max(0, Math.min(255, r));
-      imgData.data[i * 4 + 1] = Math.max(0, Math.min(255, g));
-      imgData.data[i * 4 + 2] = Math.max(0, Math.min(255, b));
-      imgData.data[i * 4 + 3] = 255; // Alpha
-    }
-    ctx.putImageData(imgData, 0, 0);
   }
 
   // --- Save Logic ---
@@ -427,10 +562,8 @@ window.initPicEdit = function () {
         if (urlLower.includes('hayao')) modelBadge = 'Hayao';
         else if (urlLower.includes('ghibli')) modelBadge = 'Ghibli';
         else if (urlLower.includes('sketch')) modelBadge = 'Sketch';
-        else if (urlLower.includes('4xlsdir')) modelBadge = '4xLSDIR';
-        else if (urlLower.includes('wdn')) modelBadge = 'WDN x4';
-        else if (urlLower.includes('general')) modelBadge = 'General x4';
-        else if (urlLower.includes('uniscale')) modelBadge = 'Uniscale';
+        else if (urlLower.includes('real_esrgan_x2')) modelBadge = 'Real-ESRGAN x2';
+        else if (urlLower.includes('real_esrgan_x4')) modelBadge = 'Real-ESRGAN x4';
 
         const badge = document.createElement('div');
         badge.innerText = modelBadge;

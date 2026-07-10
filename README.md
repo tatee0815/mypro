@@ -8,9 +8,8 @@ This project serves as both a personal portfolio to showcase my projects and ski
 
 - **Personal Portfolio:** Detailed sections about my background, skills, and past projects as a game developer.
 - **Some Pics (Image Gallery):** A dynamic image gallery where users can view, upload, and delete images. Images are securely hosted and managed using **Cloudinary**. The gallery is optimized with Cloudinary's dynamic transformations to deliver ultra-fast WebP thumbnails.
-- **Pic Edit (AI Image Editor):** A powerful image processing tool offering dual AI backends:
+- **Pic Edit (AI Image Editor):** A powerful image processing tool offering AI backends:
   - **Browser-based (ONNX Runtime Web):** Runs AnimeGANv3 models instantly in your browser via WebAssembly (Hayao, Ghibli, Sketch styles).
-  - **Server-based (NCNN Vulkan):** Uses `realesrgan-ncnn-vulkan` executed on the Node.js backend for high-quality restoration and upscaling (4xLSDIR, WDN_x4, etc.).
   - Features an interactive side-by-side Comparison Mode and options to save results to Cloudinary (Single Photo or Before/After format).
 - **YouTube Music Player:** An integrated custom music player that allows users to search for music and play it directly from YouTube, powered by the **YouTube Data API v3**.
 - **Responsive & Interactive UI:** Built as a Single Page Application (SPA) with modern CSS techniques including a custom interactive cursor, smooth animations, and full mobile responsiveness.
@@ -19,7 +18,6 @@ This project serves as both a personal portfolio to showcase my projects and ski
 
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript, ONNX Runtime Web.
 - **Backend:** Node.js, Express.js.
-- **AI Engine:** Real-ESRGAN NCNN Vulkan (executable).
 - **Cloud Storage:** Cloudinary (with on-the-fly image transformations).
 - **APIs:** Google YouTube Data API v3.
 - **Other Tools:** Multer, Cors, Dotenv.
@@ -33,7 +31,6 @@ Follow these instructions to get a copy of the project up and running on your lo
 You will need the following installed on your machine:
 - [Node.js](https://nodejs.org/) (v14 or higher is recommended)
 - [Git](https://git-scm.com/)
-- **NCNN Binaries:** Download the `realesrgan-ncnn-vulkan` windows executable release from its official GitHub and place the `.exe` inside the `/bin` directory to enable the local Restoration models.
 
 ### Cloudinary & YouTube API Setup
 
@@ -77,6 +74,32 @@ To use the image upload/gallery features and the YouTube music player, you will 
    ```
    http://localhost:3000
    ```
+
+## 📁 Project Structure
+
+```text
+about-tatee/
+├── models/                     # ONNX AI Models
+│   ├── AnimeGANv3_Hayao_36.onnx
+│   ├── AnimeGANv3_large_Ghibli_c1_e299.onnx
+│   ├── AnimeGANv3_PortraitSketch_25.onnx
+│   └── real_esrgan_x2.onnx
+├── Pictures/                   # Local image assets for UI
+├── middleware/                 # Backend middlewares (if any)
+├── index.html                  # Main Portfolio Entry
+├── profile.html                # About Me Page
+├── projects.html               # Projects Showcase
+├── somepics.html               # Cloudinary Gallery Page
+├── pic-edit.html               # AI Image Editor Page (ONNX WASM)
+├── style.css                   # Global Styles
+├── scripts.js                  # Global and SPA routing logic
+├── pic-edit.js                 # UI and Seamless Tiling logic for AI
+├── ai-worker.js                # Web Worker for background ONNX inference
+├── server.js                   # Node.js Express server (API & Static files)
+├── .env                        # Environment variables (API Keys)
+├── package.json                # Node.js dependencies
+└── Procfile                    # Deployment config for Render/Heroku
+```
 
 ## 🤝 Contact
 

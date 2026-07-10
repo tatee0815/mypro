@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-  <!-- Include ONNX Runtime Web -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <title>Tatee Website - AI Pic Edit</title>
 </head>
 <body class="somepics-page pic-edit-page">
@@ -34,21 +32,21 @@
             <label for="model-select">Choose AI Model:</label>
             <select id="model-select" class="custom-select">
               <optgroup label="GANv3 Anime">
-                <option value="AnimeGANv3_Hayao_36.onnx">Hayao</option>
+                <option value="AnimeGANv3_Hayao_36.onnx" selected>Hayao</option>
                 <option value="AnimeGANv3_large_Ghibli_c1_e299.onnx">Ghibli</option>
                 <option value="AnimeGANv3_PortraitSketch_25.onnx">Sketch</option>
               </optgroup>
-              <optgroup label="Restore Picture">
-                <option value="4xLSDIR" title="Tái tạo bề mặt (Texture Restoration) - Ảnh chân dung, ảnh chụp người, quần áo">4xLSDIR</option>
-                <option value="RealESRGAN_General_WDN_x4_v3" title="Tái tạo chi tiết phức tạp - Ảnh phong cảnh, ảnh nhiều chi tiết nhỏ">RealESRGAN General WDN x4</option>
-                <option value="RealESRGAN_General_x4_v3" title="Cân bằng mọi thứ - Ảnh đời thường, ảnh đa dụng">RealESRGAN General x4</option>
-                <option value="uniscale_restore" title="Khử nhiễu & sửa lỗi nén - Ảnh thumbnail Zalo, ảnh bị nén vỡ hạt">Uniscale Restore</option>
+              <optgroup label="Real-ESRGAN (Upscale)">
+                <option value="real_esrgan_x2.onnx">Real-ESRGAN x2</option>
               </optgroup>
             </select>
+            <p id="model-time-warning" style="color: #ff9800; font-size: 1.3rem; font-weight: bold; margin-top: 15px; margin-bottom: 0; font-style: italic; text-align: center; background: rgba(255,152,0,0.15); padding: 15px; border-radius: 10px; border: 1px dashed rgba(255,152,0,0.5);">
+               ⚠️ Note: AI Processing can take 3-5 minutes. You can safely switch tabs while waiting.
+            </p>
         </div>
         
-        <form id="upload-form" class="custom-upload-form">
-          <label for="image-input" class="btn-action" style="display: block; text-align: center; margin-bottom: 20px;">
+        <form id="upload-form">
+          <label for="image-input" class="btn-action">
               <i class="fa-solid fa-upload"></i> Select Image
               <input type="file" id="image-input" accept="image/*" required hidden>
           </label>
@@ -63,7 +61,8 @@
            <div style="width: 80%; max-width: 400px; height: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; margin-bottom: 15px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);">
              <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #24b7ff, #00ffcc); transition: width 0.4s ease-out; box-shadow: 0 0 10px rgba(36,183,255,0.5);"></div>
            </div>
-           <p id="loading-text" style="color: white; font-size: 1.2rem; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Initializing...</p>
+           <p id="loading-text" style="color: white; font-size: 1.2rem; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.5); margin-bottom: 8px;">Initializing...</p>
+           <p id="hardware-status" style="color: #aaa; font-size: 0.9rem; font-style: italic; max-width: 80%; text-align: center; margin: 0;"></p>
         </div>
         <!-- Wrap canvas in a container to enforce max sizes -->
         <div class="canvas-wrapper" style="display:none;" id="canvas-wrapper">
