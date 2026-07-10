@@ -168,9 +168,11 @@ async function fetchImages() {
       const uploadIndex = parts.indexOf('upload');
       const pathAfterUpload = parts.slice(uploadIndex + 1);
       const publicId = (pathAfterUpload[0].startsWith('v') ? pathAfterUpload.slice(1) : pathAfterUpload).join('/').split('.')[0];
+      // Generate WebP thumbnail URL: /image/upload/w_400,q_auto,f_auto/
+      const thumbUrl = url.replace('/upload/', '/upload/w_400,q_auto,f_auto/');
       return `
         <div class="gallery-item" style="display:inline-block; position:relative;">
-          <img src="${url}" alt="pic" class="preview-img" data-src="${url}" style="cursor:pointer;">
+          <img src="${thumbUrl}" alt="pic" class="preview-img" data-src="${url}" style="cursor:pointer;">
           <button onclick="deleteImage('${publicId}')" style="position:absolute; top:5px; right:5px; background:red; color:white; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; z-index:10;">×</button>
         </div>
       `;
@@ -380,6 +382,13 @@ window.closeModal = closeModal;
       }
       
       if (url.includes('pic-edit.html')) {
+        // Load ONNX runtime dynamically if not present
+        if (!document.querySelector('script[src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"]')) {
+          const ortScript = document.createElement('script');
+          ortScript.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js';
+          document.head.appendChild(ortScript);
+        }
+
         if (!document.querySelector('script[src="pic-edit.js"]')) {
           const script = document.createElement('script');
           script.src = 'pic-edit.js';

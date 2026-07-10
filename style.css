@@ -928,6 +928,13 @@ body.pic-edit-page {
   color: #fff;
 }
 
+.custom-select optgroup {
+  background: #1e1e26;
+  color: #00ffcc;
+  font-weight: bold;
+  font-style: normal;
+}
+
 .btn-action {
   padding: 15px;
   font-size: 1.2rem;
@@ -1356,6 +1363,7 @@ body.pic-edit-page {
 
 #volume-slider {
   -webkit-appearance: none;
+  appearance: none;
   width: 90px;
   height: 4px;
   background: rgba(255, 255, 255, 0.2);
@@ -1368,6 +1376,7 @@ body.pic-edit-page {
 
 #volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
+  appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -1525,4 +1534,15 @@ body.pic-edit-page {
   height: 100vh;
   z-index: -1;
   pointer-events: none;
+}
+
+/* Disable custom cursor on touch devices */
+@media (pointer: coarse) {
+  * {
+    cursor: auto !important;
+  }
+  
+  .cursor {
+    display: none !important;
+  }
 }

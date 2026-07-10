@@ -33,9 +33,17 @@
         <div class="model-select-wrapper">
             <label for="model-select">Choose AI Model:</label>
             <select id="model-select" class="custom-select">
-            <option value="AnimeGANv3_Hayao_36.onnx">Hayao</option>
-            <option value="AnimeGANv3_large_Ghibli_c1_e299.onnx">Ghibli</option>
-            <option value="AnimeGANv3_PortraitSketch_25.onnx">Sketch</option>
+              <optgroup label="GANv3 Anime">
+                <option value="AnimeGANv3_Hayao_36.onnx">Hayao</option>
+                <option value="AnimeGANv3_large_Ghibli_c1_e299.onnx">Ghibli</option>
+                <option value="AnimeGANv3_PortraitSketch_25.onnx">Sketch</option>
+              </optgroup>
+              <optgroup label="Restore Picture">
+                <option value="4xLSDIR" title="Tái tạo bề mặt (Texture Restoration) - Ảnh chân dung, ảnh chụp người, quần áo">4xLSDIR</option>
+                <option value="RealESRGAN_General_WDN_x4_v3" title="Tái tạo chi tiết phức tạp - Ảnh phong cảnh, ảnh nhiều chi tiết nhỏ">RealESRGAN General WDN x4</option>
+                <option value="RealESRGAN_General_x4_v3" title="Cân bằng mọi thứ - Ảnh đời thường, ảnh đa dụng">RealESRGAN General x4</option>
+                <option value="uniscale_restore" title="Khử nhiễu & sửa lỗi nén - Ảnh thumbnail Zalo, ảnh bị nén vỡ hạt">Uniscale Restore</option>
+              </optgroup>
             </select>
         </div>
         
@@ -93,6 +101,10 @@
         <!-- Upload to Gallery -->
         <div id="upload-modal" class="modal-content" style="display:none;">
             <p>Save this AI photo to Gallery?</p>
+            <div style="margin-bottom: 15px; display: flex; justify-content: center; gap: 20px;">
+              <label style="cursor: pointer;"><input type="radio" name="save-mode" value="single" checked> Single Photo</label>
+              <label style="cursor: pointer;"><input type="radio" name="save-mode" value="compare"> Compare Mode</label>
+            </div>
             <img id="upload-modal-preview-img" src="" style="max-width:100%;margin-bottom:10px;" />
             <button id="upload-modal-yes">Confirm</button>
             <button id="upload-modal-no">Cancel</button>
