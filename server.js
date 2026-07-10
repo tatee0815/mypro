@@ -129,3 +129,33 @@ app.post('/api/upload-ai-edit', upload.single('image'), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });
+
+// API proxy tìm kiếm YouTube
+app.get('/api/youtube-search', (req, res) => {
+  const query = req.query.q;
+  if (!query) {
+    return res.status(400).json({ error: 'Thiếu từ khóa tìm kiếm' });
+  }
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+
+  const https = require('https');
+  https.get(url, (apiRes) => {
+    let data = '';
+    apiRes.on('data', (chunk) => {
+      data += chunk;
+    });
+    apiRes.on('end', () => {
+      try {
+        const parsedData = JSON.parse(data);
+        res.json(parsedData);
+      } catch (e) {
+        res.status(500).json({ error: 'Lỗi parse dữ liệu' });
+      }
+    });
+  }).on('error', (err) => {
+    console.error('YouTube API error:', err);
+    res.status(500).json({ error: 'Lỗi khi gọi YouTube API' });
+  });
+});

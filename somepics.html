@@ -10,7 +10,7 @@
 <body class="somepics-page">
   <div class="cursor"></div>
   <header>
-    <a href="#" class="greets">Welcome to my website</a>
+
     <button class="menu-toggle" aria-label="Open Menu">
       <i class="fa-solid fa-bars"></i>
     </button>
@@ -27,7 +27,7 @@
     <form id="upload-form" class="custom-upload-form">
     <label for="image-input" class="custom-file-label">
         <i class="fa-solid fa-plus"></i>
-        <input type="file" id="image-input" accept="image/*" required hidden>
+        <input type="file" id="image-input" accept="image/*" multiple required hidden>
     </label>
     <span id="file-chosen" class="file-chosen-text"></span>
     <img id="img-preview" >
@@ -49,7 +49,7 @@
 
         <!-- Upload -->
         <div id="upload-modal" class="modal-content" style="display:none;">
-            <p>Upload this photo?</p>
+            <p id="upload-modal-text">Upload this photo?</p>
             <img id="upload-modal-preview-img" src="" style="max-width:100%;margin-bottom:10px;" />
             <input type="password" id="upload-modal-password-input" placeholder="Type password" />
             <div id="upload-modal-error" style="color:red;display:none;">Wrong password!</div>

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+window.initPicEdit = function() {
   const imageInput = document.getElementById('image-input');
   const btnConvert = document.getElementById('btn-convert');
   const btnSave = document.getElementById('btn-save');
@@ -334,7 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const img = document.createElement('img');
         img.src = url;
-        img.className = 'gallery-img project-main-img'; // reuse existing class
+        img.className = 'gallery-img project-main-img preview-img'; // added preview-img for delegation
+        img.setAttribute('data-src', url);
         img.style.width = '100%';
         img.style.maxWidth = '300px';
         img.style.height = 'auto';
@@ -342,8 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
         img.style.borderRadius = '10px';
         img.style.cursor = 'pointer';
         img.loading = 'lazy';
-        
-        img.onclick = () => window.openModal(url);
         
         // Determine model from url
         let modelBadge = 'AI Edit';
@@ -398,5 +397,14 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Failed to load AI gallery", err);
     }
   }
+};
 
-});
+// Initialize if we loaded directly on the pic-edit page
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.initPicEdit);
+} else {
+  // If already loaded, run immediately, but check if we are on the right page
+  if (window.location.pathname.includes('pic-edit.html')) {
+    window.initPicEdit();
+  }
+}
