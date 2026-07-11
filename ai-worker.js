@@ -117,7 +117,7 @@ function postprocess(tensor, isRealESRGAN) {
 }
 
 self.onmessage = async (e) => {
-    const { type, modelName, isRealESRGAN, tileData, width, height, tileId } = e.data;
+    const { type, modelName, isRealESRGAN, buffer, width, height, tileId } = e.data;
     
     if (type === 'init') {
         try {
@@ -131,6 +131,7 @@ self.onmessage = async (e) => {
     
     if (type === 'process') {
         try {
+            const tileData = new Uint8ClampedArray(buffer);
             const { session: sess } = await initSession(modelName);
             const inputTensor = preprocess(tileData, width, height, isRealESRGAN);
             const inputName = sess.inputNames[0];
@@ -146,7 +147,7 @@ self.onmessage = async (e) => {
             self.postMessage({
                 type: 'process_done',
                 tileId,
-                outputRgba,
+                buffer: outputRgba.buffer,
                 outW,
                 outH
             }, [outputRgba.buffer]); // Transfer buffer to avoid heavy copying

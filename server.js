@@ -23,11 +23,19 @@ cloudinary.config({
 // Cấu hình CORS
 app.use(cors());
 
-// Cấu hình multer để lưu tạm vào bộ nhớ
-const upload = multer({ storage: multer.memoryStorage() });
-
 // Phục vụ file tĩnh từ thư mục gốc
 app.use(express.static('.'));
+
+// Parse JSON payload (Thay cho Multer memoryStorage)
+app.use(express.json());
+
+// API cấp thông tin Cloudinary cho Frontend
+app.get('/api/cloudinary-config', (req, res) => {
+  res.json({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    upload_preset: 'unsigned_upload' // Lưu ý: Cần tạo unsigned upload preset trên Cloudinary dashboard
+  });
+});
 
 // API lấy danh sách ảnh từ Cloudinary
 app.get('/api/images', async (req, res) => {
@@ -44,26 +52,15 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
-// API upload ảnh lên Cloudinary
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Không có file được tải lên' });
+// API ghi nhận ảnh upload từ Client
+app.post('/api/upload', async (req, res) => {
+  const { secure_url } = req.body;
+  if (!secure_url) {
+    return res.status(400).json({ error: 'Không có URL được tải lên' });
   }
-  try {
-    const result = await cloudinary.uploader.upload_stream({
-      resource_type: 'image',
-      folder: 'somepics'
-    }, (error, result) => {
-      if (error) {
-        console.error('Lỗi khi upload lên Cloudinary:', error.message);
-        return res.status(500).json({ error: 'Upload thất bại' });
-      }
-      res.json({ url: result.secure_url });
-    }).end(req.file.buffer);
-  } catch (error) {
-    console.error('Lỗi khi upload lên Cloudinary:', error.message);
-    res.status(500).json({ error: 'Upload thất bại' });
-  }
+  // Giả lập lưu vào DB
+  console.log('Client đã upload thành công ảnh:', secure_url);
+  res.json({ url: secure_url, success: true });
 });
 
 // API xóa ảnh từ Cloudinary
@@ -101,31 +98,19 @@ app.get('/api/images-ai-edit', async (req, res) => {
   }
 });
 
-// API upload ảnh AI đã xử lý lên Cloudinary (thư mục riêng theo model)
-app.post('/api/upload-ai-edit', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Không có file được tải lên' });
+// API ghi nhận ảnh AI đã xử lý từ Client
+app.post('/api/upload-ai-edit', async (req, res) => {
+  const { secure_url, model } = req.body;
+  if (!secure_url) {
+    return res.status(400).json({ error: 'Không có URL được tải lên' });
   }
 
-  // Lấy tên model từ request body, loại bỏ đuôi .onnx nếu có
-  const modelName = req.body.model || 'unknown';
-  const folderName = modelName.replace('.onnx', '');
+  // Lấy tên model
+  const modelName = model || 'unknown';
 
-  try {
-    const result = await cloudinary.uploader.upload_stream({
-      resource_type: 'image',
-      folder: `AI_Edits/${folderName}`
-    }, (error, result) => {
-      if (error) {
-        console.error('Lỗi khi upload lên Cloudinary:', error.message);
-        return res.status(500).json({ error: 'Upload thất bại' });
-      }
-      res.json({ url: result.secure_url });
-    }).end(req.file.buffer);
-  } catch (error) {
-    console.error('Lỗi khi upload lên Cloudinary:', error.message);
-    res.status(500).json({ error: 'Upload thất bại' });
-  }
+  // Giả lập lưu vào DB
+  console.log(`Client đã upload ảnh AI (${modelName}) thành công:`, secure_url);
+  res.json({ url: secure_url, success: true });
 });
 
 
@@ -133,6 +118,21 @@ app.post('/api/upload-ai-edit', upload.single('image'), async (req, res) => {
 // Khởi động server
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
+});
+
+// API dành riêng cho việc chống ngủ đông
+app.get('/api/keep-awake', (req, res) => {
+  res.status(200).send('Trẫm vẫn thức!');
+});
+
+// API xác thực mật khẩu
+app.post('/api/verify-password', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.FIXED_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, error: 'Mật khẩu không chính xác' });
+  }
 });
 
 // API proxy tìm kiếm YouTube

@@ -1,51 +1,50 @@
 const menuBtn = document.querySelector('.menu-toggle');
 const nav = document.querySelector('nav');
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
-const FIXED_PASSWORD = '0815'; // Chuyển sang server-side cho production
 
 // Global AI Processing State
 window.aiState = {
-    worker: null, // Will be initialized lazily or explicitly
-    isProcessing: false,
-    progress: { percent: 0, text: '' },
-    originalImage: null,
-    finalCanvasData: null,
-    onMessageCallback: null // Used by pic-edit.js to hook into live events
+  worker: null, // Will be initialized lazily or explicitly
+  isProcessing: false,
+  progress: { percent: 0, text: '' },
+  originalImage: null,
+  finalCanvasData: null,
+  onMessageCallback: null // Used by pic-edit.js to hook into live events
 };
 
 // Global AI Badge Injection
 document.addEventListener('DOMContentLoaded', () => {
-    const badgeHtml = `
+  const badgeHtml = `
       <div id="global-ai-badge" style="display: none; position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.85); color: white; padding: 15px 25px; border-radius: 30px; z-index: 99999; border: 2px solid #24b7ff; cursor: pointer; box-shadow: 0 0 15px rgba(36,183,255,0.7); font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 500; align-items: center; gap: 15px;">
         <i class="fa-solid fa-microchip fa-spin" style="color: #00ffcc; font-size: 1.5rem;"></i>
         <span id="global-ai-badge-text">AI Processing... 0%</span>
       </div>
     `;
-    document.body.insertAdjacentHTML('beforeend', badgeHtml);
-    
-    document.getElementById('global-ai-badge').addEventListener('click', () => {
-        if (!window.location.href.includes('pic-edit.html')) {
-            // Navigate back to pic-edit using the existing SPA router
-            const navLinks = document.querySelectorAll('nav a');
-            navLinks.forEach(link => {
-                if(link.getAttribute('href') === 'pic-edit.html') link.click();
-            });
-        }
-    });
+  document.body.insertAdjacentHTML('beforeend', badgeHtml);
+
+  document.getElementById('global-ai-badge').addEventListener('click', () => {
+    if (!window.location.href.includes('pic-edit.html')) {
+      // Navigate back to pic-edit using the existing SPA router
+      const navLinks = document.querySelectorAll('nav a');
+      navLinks.forEach(link => {
+        if (link.getAttribute('href') === 'pic-edit.html') link.click();
+      });
+    }
+  });
 });
 
 window.updateGlobalAiProgress = (percent, text) => {
-    window.aiState.progress = { percent, text };
-    
-    const badge = document.getElementById('global-ai-badge');
-    const badgeText = document.getElementById('global-ai-badge-text');
-    
-    if (window.aiState.isProcessing) {
-        if (badge) badge.style.display = 'flex';
-        if (badgeText) badgeText.innerText = `AI Processing... ${percent}%`;
-    } else {
-        if (badge) badge.style.display = 'none';
-    }
+  window.aiState.progress = { percent, text };
+
+  const badge = document.getElementById('global-ai-badge');
+  const badgeText = document.getElementById('global-ai-badge-text');
+
+  if (window.aiState.isProcessing) {
+    if (badge) badge.style.display = 'flex';
+    if (badgeText) badgeText.innerText = `AI Processing... ${percent}%`;
+  } else {
+    if (badge) badge.style.display = 'none';
+  }
 };
 // Global Modal getters
 function getModalEls() {
@@ -148,17 +147,37 @@ function openDeleteModal(callback) {
   els.deleteModalError.style.display = 'none';
   els.deleteModalPasswordInput.focus();
 
-  els.deleteModalYesBtn.onclick = () => {
+  els.deleteModalYesBtn.onclick = async () => {
     const pwd = els.deleteModalPasswordInput.value;
-    if (!pwd || pwd !== FIXED_PASSWORD) {
+    if (!pwd) {
       els.deleteModalError.style.display = 'block';
       els.deleteModalPasswordInput.value = '';
       els.deleteModalPasswordInput.focus();
       return;
     }
-    els.deleteModalError.style.display = 'none';
-    closeModal();
-    callback();
+
+    try {
+      const res = await fetch(`${API_BASE}/verify-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        els.deleteModalError.style.display = 'block';
+        els.deleteModalPasswordInput.value = '';
+        els.deleteModalPasswordInput.focus();
+        return;
+      }
+
+      els.deleteModalError.style.display = 'none';
+      closeModal();
+      callback();
+    } catch (error) {
+      console.error('Lỗi xác thực:', error);
+      els.deleteModalError.style.display = 'block';
+    }
   };
 
   els.deleteModalNoBtn.onclick = closeModal;
@@ -180,17 +199,37 @@ function openUploadModal(imgSrc, callback) {
   els.uploadModalError.style.display = 'none';
   els.uploadModalPasswordInput.focus();
 
-  els.uploadModalYesBtn.onclick = () => {
+  els.uploadModalYesBtn.onclick = async () => {
     const pwd = els.uploadModalPasswordInput.value;
-    if (!pwd || pwd !== FIXED_PASSWORD) {
+    if (!pwd) {
       els.uploadModalError.style.display = 'block';
       els.uploadModalPasswordInput.value = '';
       els.uploadModalPasswordInput.focus();
       return;
     }
-    els.uploadModalError.style.display = 'none';
-    closeModal();
-    callback();
+
+    try {
+      const res = await fetch(`${API_BASE}/verify-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        els.uploadModalError.style.display = 'block';
+        els.uploadModalPasswordInput.value = '';
+        els.uploadModalPasswordInput.focus();
+        return;
+      }
+
+      els.uploadModalError.style.display = 'none';
+      closeModal();
+      callback();
+    } catch (error) {
+      console.error('Lỗi xác thực:', error);
+      els.uploadModalError.style.display = 'block';
+    }
   };
 
   els.uploadModalNoBtn.onclick = closeModal;
@@ -249,7 +288,7 @@ async function deleteImage(publicId) {
   });
 }
 
-window.initSomePics = function() {
+window.initSomePics = function () {
   const uploadForm = document.getElementById('upload-form');
   const imageInput = document.getElementById('image-input');
   const fileChosen = document.getElementById('file-chosen');
@@ -276,12 +315,12 @@ window.initSomePics = function() {
         loadPreview(0, (firstImgData) => {
           imgPreview.src = firstImgData;
           imgPreview.style.display = 'none';
-          
+
           const modalText = document.getElementById('upload-modal-text');
           if (modalText) {
-             modalText.innerText = selectedFiles.length > 1 
-               ? `Upload these ${selectedFiles.length} photos? (Click image to view next)` 
-               : `Upload this photo?`;
+            modalText.innerText = selectedFiles.length > 1
+              ? `Upload these ${selectedFiles.length} photos? (Click image to view next)`
+              : `Upload this photo?`;
           }
 
           if (uploadPreviewImg) {
@@ -297,21 +336,34 @@ window.initSomePics = function() {
 
           openUploadModal(firstImgData, async () => {
             try {
+              // Fetch config
+              const configRes = await fetch(`${API_BASE}/cloudinary-config`);
+              const config = await configRes.json();
+
               // Upload all files concurrently
-              const uploadPromises = selectedFiles.map(file => {
+              const uploadPromises = selectedFiles.map(async (file) => {
                 const formData = new FormData();
-                formData.append('image', file);
-                return fetch(`${API_BASE}/upload`, {
+                formData.append('file', file);
+                formData.append('upload_preset', config.upload_preset);
+                formData.append('folder', 'somepics');
+
+                const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${config.cloud_name}/image/upload`, {
                   method: 'POST',
                   body: formData,
-                }).then(res => {
-                  if (!res.ok) throw new Error('Upload thất bại cho 1 file');
-                  return res.json();
                 });
+                const cloudData = await cloudRes.json();
+
+                if (!cloudData.secure_url) throw new Error(cloudData.error?.message || 'Upload thất bại cho 1 file');
+
+                return fetch(`${API_BASE}/upload`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ secure_url: cloudData.secure_url })
+                }).then(res => res.json());
               });
-              
+
               await Promise.all(uploadPromises);
-              
+
               await fetchImages();
               imageInput.value = '';
               imgPreview.style.display = 'none';
@@ -356,7 +408,7 @@ window.closeModal = closeModal;
 // --- SPA Router & Persistent Music Player ---
 (function () {
   // 1. SPA Navigation & Global Event Delegation Logic
-  
+
   // Event Delegation for Image Previews (persists across tab navigation)
   document.body.addEventListener('click', (e) => {
     if (e.target.classList.contains('preview-img')) {
@@ -383,7 +435,17 @@ window.closeModal = closeModal;
     navigateTo(window.location.pathname, false);
   });
 
+  function cleanupAiState() {
+    // Singleton Pattern: Tuyệt đối không terminate Worker ở đây
+    // Để cho window.globalAiWorker tiếp tục xử lý ngầm khi user chuyển trang
+    if (window.aiState) {
+      // Chỉ gỡ bỏ callback cập nhật UI nội bộ trang pic-edit vì DOM chuẩn bị bị xóa
+      window.aiState.onMessageCallback = null;
+    }
+  }
+
   async function navigateTo(url, push = true) {
+    cleanupAiState();
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
@@ -424,7 +486,7 @@ window.closeModal = closeModal;
         if (typeof fetchImages === 'function') fetchImages();
         if (typeof window.initSomePics === 'function') window.initSomePics();
       }
-      
+
       if (url.includes('pic-edit.html')) {
         // Load ONNX runtime dynamically if not present
         if (!document.querySelector('script[src="pic-edit.js"]')) {
@@ -436,12 +498,12 @@ window.closeModal = closeModal;
           if (typeof window.initPicEdit === 'function') window.initPicEdit();
         }
       }
-      
+
       // Update Particles
       if (typeof window.updateParticles === 'function') {
         window.updateParticles();
       }
-      
+
       // Scroll to top
       window.scrollTo(0, 0);
 
@@ -545,13 +607,13 @@ window.closeModal = closeModal;
     const startBtn = document.getElementById('start-experience-btn');
     const overlay = document.getElementById('welcome-overlay');
     const controller = document.getElementById('music-controller');
-    
+
     // Cursor effect on welcome overlay
     const cursor = document.querySelector('.cursor');
     if (overlay && cursor) {
       overlay.addEventListener('mouseover', () => cursor.classList.add('modal-active'));
       overlay.addEventListener('mouseout', () => cursor.classList.remove('modal-active'));
-      
+
       // Cleanup cursor if overlay is clicked and disappears while hovered
       startBtn.addEventListener('click', () => {
         cursor.classList.remove('modal-active');
@@ -563,7 +625,7 @@ window.closeModal = closeModal;
     const searchInput = document.getElementById('music-search-input');
     const searchBtn = document.getElementById('music-search-btn');
     const resultsContainer = document.getElementById('music-search-results');
-    
+
     const playlistToggleBtn = document.getElementById('playlist-toggle-btn');
     const playlistCloseBtn = document.getElementById('playlist-close-btn');
     const loopModeBtn = document.getElementById('loop-mode-btn');
@@ -648,34 +710,34 @@ window.closeModal = closeModal;
       }
     });
 
-    window.renderPlaylist = function() {
+    window.renderPlaylist = function () {
       playlistItemsContainer.innerHTML = '';
       if (window.myPlaylist.length === 0) {
         playlistItemsContainer.innerHTML = '<div style="color: #888; font-size: 0.8rem; text-align: center; padding: 10px;">Empty Playlist</div>';
         return;
       }
-      
+
       window.myPlaylist.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'playlist-item';
         if (index === window.currentPlaylistIndex) div.classList.add('active');
-        
+
         div.innerHTML = `
           <img src="${item.thumbnail}" alt="thumb">
           <div class="playlist-item-title">${item.title}</div>
           <button class="delete-playlist-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>
         `;
-        
+
         // Play when clicking the title/thumbnail
         div.querySelector('img').addEventListener('click', () => playItem(index, item));
         div.querySelector('.playlist-item-title').addEventListener('click', () => playItem(index, item));
-        
+
         // Delete item logic
         div.querySelector('.delete-playlist-btn').addEventListener('click', (e) => {
           e.stopPropagation();
           window.myPlaylist.splice(index, 1);
           savePlaylist(); // Save after deleting
-          
+
           if (window.currentPlaylistIndex === index) {
             // Deleted the currently playing track
             if (window.myPlaylist.length > 0) {
@@ -699,7 +761,7 @@ window.closeModal = closeModal;
           }
           window.renderPlaylist();
         });
-        
+
         function playItem(idx, itm) {
           window.currentPlaylistIndex = idx;
           window.musicPlayer.loadVideoById(itm.videoId);
@@ -707,11 +769,11 @@ window.closeModal = closeModal;
           window.renderPlaylist();
           playlistPanel.classList.remove('open'); // Auto-close on play
         }
-        
+
         playlistItemsContainer.appendChild(div);
       });
     };
-    
+
     window.renderPlaylist();
 
     const musicStarted = sessionStorage.getItem('musicStarted');
@@ -813,14 +875,14 @@ window.closeModal = closeModal;
         // Click on the image/title to play immediately
         div.querySelector('img').addEventListener('click', playImmediately);
         div.querySelector('span').addEventListener('click', playImmediately);
-        
+
         function playImmediately() {
           window.musicPlayer.loadVideoById(videoId);
           document.getElementById('music-status').innerText = `Playing: ${title}`;
           resultsContainer.classList.remove('active'); // hide results
           searchInput.value = '';
           expandedArea.classList.remove('open'); // hide expanded area if open
-          
+
           // If not in playlist, add and set index
           const existingIndex = window.myPlaylist.findIndex(v => v.videoId === videoId);
           if (existingIndex === -1) {
@@ -838,17 +900,17 @@ window.closeModal = closeModal;
         const addBtn = div.querySelector('.add-playlist-btn');
         addBtn.addEventListener('click', (e) => {
           e.stopPropagation(); // prevent bubbling to the item
-          
+
           const existingIndex = window.myPlaylist.findIndex(v => v.videoId === videoId);
           if (existingIndex !== -1) {
-             alert('Bài hát này đã có trong Playlist rồi!');
-             return;
+            alert('Bài hát này đã có trong Playlist rồi!');
+            return;
           }
-          
+
           window.myPlaylist.push({ videoId, title, thumbnail });
           savePlaylist(); // Save after adding
           window.renderPlaylist();
-          
+
           // Auto-play if it's the first song being added
           if (window.myPlaylist.length === 1 && window.currentPlaylistIndex === -1) {
             window.currentPlaylistIndex = 0;
@@ -857,7 +919,7 @@ window.closeModal = closeModal;
           }
           savePlaylist(); // Save after adding
           window.renderPlaylist();
-          
+
           // Feedback effect
           addBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
           setTimeout(() => { addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>'; }, 1000);
@@ -893,7 +955,7 @@ window.closeModal = closeModal;
     } else if (event.data === YT.PlayerState.ENDED) {
       // Auto-play logic using myPlaylist
       if (window.myPlaylist.length > 0) {
-        
+
         if (window.loopMode === 'loop-one') {
           // Play the same song
           const sameSong = window.myPlaylist[window.currentPlaylistIndex];
@@ -917,12 +979,12 @@ window.closeModal = closeModal;
           if (window.currentPlaylistIndex >= window.myPlaylist.length) {
             window.currentPlaylistIndex = 0;
           }
-          
+
           const nextSong = window.myPlaylist[window.currentPlaylistIndex];
           window.musicPlayer.loadVideoById(nextSong.videoId);
           statusText.innerText = `Playing: ${nextSong.title}`;
         }
-        
+
         window.renderPlaylist();
       } else {
         // If no playlist, just loop the same default video
@@ -934,34 +996,34 @@ window.closeModal = closeModal;
 })();
 
 // --- High Performance Particle Engine (Antigravity Theme) ---
-(function() {
+(function () {
   const canvas = document.createElement('canvas');
   canvas.id = 'bg-canvas';
   document.body.prepend(canvas);
-  
+
   const ctx = canvas.getContext('2d', { alpha: true });
   let width, height;
   let particles = [];
   let currentTheme = '';
-  
+
   function resize() {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
   }
-  
+
   window.addEventListener('resize', resize);
   resize();
-  
+
   class Particle {
     constructor(theme) {
       this.theme = theme;
       this.reset();
     }
-    
+
     reset() {
       this.x = Math.random() * width;
       this.y = Math.random() * height;
-      
+
       if (this.theme === 'home-page') { // Stars
         this.size = Math.random() * 2;
         this.vx = (Math.random() - 0.5) * 0.5;
@@ -986,11 +1048,11 @@ window.closeModal = closeModal;
         this.color = `rgba(255, 255, 255, ${Math.random() * 0.3})`;
       }
     }
-    
+
     update() {
       this.x += this.vx;
       this.y += this.vy;
-      
+
       // Screen wrap or reset
       if (this.theme === 'projects-page') {
         if (this.y > height) this.reset();
@@ -1003,7 +1065,7 @@ window.closeModal = closeModal;
         if (this.y > height) this.y = 0;
       }
     }
-    
+
     draw() {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -1011,15 +1073,15 @@ window.closeModal = closeModal;
       ctx.fill();
     }
   }
-  
-  window.updateParticles = function() {
+
+  window.updateParticles = function () {
     let newTheme = document.body.className;
     // Just handle the main pages
     if (newTheme.includes('home')) newTheme = 'home-page';
     else if (newTheme.includes('profile')) newTheme = 'profile-page';
     else if (newTheme.includes('projects')) newTheme = 'projects-page';
     else newTheme = 'somepics-page';
-    
+
     if (currentTheme !== newTheme) {
       currentTheme = newTheme;
       particles = [];
@@ -1027,33 +1089,33 @@ window.closeModal = closeModal;
       if (currentTheme === 'home-page') numParticles = 150;
       if (currentTheme === 'projects-page') numParticles = 30; // Reduced for performance
       if (currentTheme === 'profile-page') numParticles = 60;
-      
+
       for (let i = 0; i < numParticles; i++) {
         particles.push(new Particle(currentTheme));
       }
     }
   };
-  
+
   // Initial setup
   window.updateParticles();
-  
+
   // High-performance animation loop
   function animate() {
     requestAnimationFrame(animate);
-    
+
     // Pause rendering if welcome overlay is active to save GPU
     const overlay = document.getElementById('welcome-overlay');
     if (overlay && overlay.style.display !== 'none' && !overlay.classList.contains('fade-out')) {
-      return; 
+      return;
     }
-    
+
     ctx.clearRect(0, 0, width, height);
-    
+
     for (let i = 0; i < particles.length; i++) {
       particles[i].update();
       particles[i].draw();
     }
-    
+
     // Draw lines for profile page (constellation effect)
     if (currentTheme === 'profile-page') {
       ctx.lineWidth = 0.5;
@@ -1061,10 +1123,10 @@ window.closeModal = closeModal;
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
-          const dist = dx*dx + dy*dy;
+          const dist = dx * dx + dy * dy;
           if (dist < 10000) {
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(100, 200, 255, ${1 - dist/10000})`;
+            ctx.strokeStyle = `rgba(100, 200, 255, ${1 - dist / 10000})`;
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
             ctx.stroke();
@@ -1073,6 +1135,6 @@ window.closeModal = closeModal;
       }
     }
   }
-  
+
   animate();
 })();

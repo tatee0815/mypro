@@ -19,8 +19,8 @@ window.initPicEdit = function () {
 
   let currentImageBlob = null;
   let pendingImageBlob = null;
-  let currentProcessedBlob = null;
-  let currentCompareBlob = null;
+  let currentProcessedBlob = window.aiState?.processedBlob || null;
+  let currentCompareBlob = window.aiState?.compareBlob || null;
   let originalImgElement = new Image();
 
   // Load gallery initially
@@ -210,10 +210,11 @@ window.initPicEdit = function () {
         try {
           updateProgress(10, 'Initializing AI Worker...');
           
-          if (!window.aiState.worker) {
-              window.aiState.worker = new Worker('ai-worker.js');
+          if (!window.globalAiWorker) {
+              window.globalAiWorker = new Worker('ai-worker.js');
           }
-          const worker = window.aiState.worker;
+          const worker = window.globalAiWorker;
+          window.aiState.worker = worker; // Sync backward compatibility
           
           await new Promise((resolve, reject) => {
               worker.onmessage = (e) => {
@@ -286,7 +287,7 @@ window.initPicEdit = function () {
                               type: 'process',
                               modelName: selectedModel,
                               isRealESRGAN,
-                              tileData: tileImgData.data,
+                              buffer: tileImgData.data.buffer,
                               width: padW,
                               height: padH,
                               tileId: currentTile
@@ -295,7 +296,7 @@ window.initPicEdit = function () {
                       
                       // Convert returned data to ImageData
                       const upscaledTileData = new ImageData(
-                          new Uint8ClampedArray(tileResult.outputRgba),
+                          new Uint8ClampedArray(tileResult.buffer),
                           tileResult.outW,
                           tileResult.outH
                       );
@@ -332,7 +333,7 @@ window.initPicEdit = function () {
                       type: 'process',
                       modelName: selectedModel,
                       isRealESRGAN,
-                      tileData: fullImgData.data,
+                      buffer: fullImgData.data.buffer,
                       width: newW,
                       height: newH,
                       tileId: 1
@@ -340,7 +341,7 @@ window.initPicEdit = function () {
               });
               
               const upscaledData = new ImageData(
-                  new Uint8ClampedArray(result.outputRgba),
+                  new Uint8ClampedArray(result.buffer),
                   result.outW,
                   result.outH
               );
@@ -365,62 +366,76 @@ window.initPicEdit = function () {
           updateProgress(100, 'Done!');
         }
 
-        // Stitch original and edited images side by side
-        editorCanvas.width = originalImgElement.width * 2;
-        editorCanvas.height = originalImgElement.height;
+        // Tái lấy lại DOM elements vì user có thể đã lướt qua trang khác rồi quay lại
+        const currentEditorCanvas = document.getElementById('editor-canvas');
+        let currentCtx = null;
+        
+        if (currentEditorCanvas) {
+            currentEditorCanvas.width = originalImgElement.width * 2;
+            currentEditorCanvas.height = originalImgElement.height;
+            currentCtx = currentEditorCanvas.getContext('2d');
+            currentCtx.drawImage(originalImgElement, 0, 0);
+            currentCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
+            
+            currentCtx.beginPath();
+            currentCtx.moveTo(originalImgElement.width, 0);
+            currentCtx.lineTo(originalImgElement.width, originalImgElement.height);
+            currentCtx.strokeStyle = "white";
+            currentCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
+            currentCtx.stroke();
+        }
 
-        // Draw original on left
-        ctx.drawImage(originalImgElement, 0, 0);
+        // Render ra offscreen canvas để lưu vào State (phòng trường hợp DOM đang ẩn)
+        const finalStateCanvas = document.createElement('canvas');
+        finalStateCanvas.width = originalImgElement.width * 2;
+        finalStateCanvas.height = originalImgElement.height;
+        const finalCtx = finalStateCanvas.getContext('2d');
+        finalCtx.drawImage(originalImgElement, 0, 0);
+        finalCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
+        
+        finalCtx.beginPath();
+        finalCtx.moveTo(originalImgElement.width, 0);
+        finalCtx.lineTo(originalImgElement.width, originalImgElement.height);
+        finalCtx.strokeStyle = "white";
+        finalCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
+        finalCtx.stroke();
 
-        // Draw edited on right (scale back from model size to original size)
-        ctx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
+        if (window.aiState) {
+            window.aiState.finalCanvasData = finalStateCanvas;
+        }
 
-        // Lưu ảnh nguyên gốc từ AI (không bị ghép viền) để chuẩn bị upload
         offCanvas.toBlob((b) => {
           currentProcessedBlob = b;
-          btnSave.disabled = false;
+          if (window.aiState) window.aiState.processedBlob = b;
+          const currentBtnSave = document.getElementById('btn-save');
+          if (currentBtnSave) currentBtnSave.disabled = false;
         }, 'image/jpeg', 0.9);
 
-      // Add a dividing line in the middle
-      ctx.beginPath();
-      ctx.moveTo(originalImgElement.width, 0);
-      ctx.lineTo(originalImgElement.width, originalImgElement.height);
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = Math.max(2, originalImgElement.width * 0.01); // responsive line width
-      ctx.stroke();
+        finalStateCanvas.toBlob((b) => {
+          currentCompareBlob = b;
+          if (window.aiState) window.aiState.compareBlob = b;
+        }, 'image/jpeg', 0.9);
 
-      // Lưu ảnh ghép (Compare Mode) để chuẩn bị upload nếu user chọn chế độ này
-      editorCanvas.toBlob((b) => {
-        currentCompareBlob = b;
-      }, 'image/jpeg', 0.9);
-
-      // Wait a tiny bit for the 100% animation to finish
-      await new Promise(resolve => setTimeout(resolve, 400));
+        await new Promise(resolve => setTimeout(resolve, 400));
 
     } catch (error) {
       console.error('Error during AI processing:', error);
       alert('An error occurred during processing.');
     } finally {
-      loadingOverlay.style.display = 'none';
-      // reset progress for next time
+      const currentLoadingOverlay = document.getElementById('loading-overlay');
+      if (currentLoadingOverlay) currentLoadingOverlay.style.display = 'none';
+      
       const fill = document.getElementById('progress-bar-fill');
       if (fill) fill.style.width = '0%';
       const hwStatus = document.getElementById('hardware-status');
       if (hwStatus) hwStatus.innerText = '';
-      btnConvert.disabled = false;
       
-      // Clear global state
+      const currentBtnConvert = document.getElementById('btn-convert');
+      if (currentBtnConvert) currentBtnConvert.disabled = false;
+      
       if (window.aiState) {
           window.aiState.isProcessing = false;
           window.aiState.onMessageCallback = null;
-          
-          // Store the final fully stitched image for restoration
-          const finalStateCanvas = document.createElement('canvas');
-          finalStateCanvas.width = editorCanvas.width;
-          finalStateCanvas.height = editorCanvas.height;
-          finalStateCanvas.getContext('2d').drawImage(editorCanvas, 0, 0);
-          window.aiState.finalCanvasData = finalStateCanvas;
-          
           if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(0, '');
       }
     }
@@ -452,10 +467,16 @@ window.initPicEdit = function () {
 
   // --- Save Logic ---
   btnSave.onclick = () => {
-    if (!currentProcessedBlob || !currentCompareBlob) return;
+    // Luôn ưu tiên lấy blob mới nhất từ window.aiState nếu có
+    const pBlob = window.aiState?.processedBlob || currentProcessedBlob;
+    const cBlob = window.aiState?.compareBlob || currentCompareBlob;
+    
+    if (!pBlob || !cBlob) return;
     
     const saveMode = document.querySelector('input[name="save-mode"]:checked')?.value || 'single';
-    uploadModalPreviewImg.src = URL.createObjectURL(saveMode === 'single' ? currentProcessedBlob : currentCompareBlob);
+    const blobToUpload = saveMode === 'single' ? pBlob : cBlob;
+    
+    uploadModalPreviewImg.src = URL.createObjectURL(blobToUpload);
     
     openModal(uploadModal);
   };
@@ -463,7 +484,9 @@ window.initPicEdit = function () {
   // Listen to radio changes to update preview dynamically
   document.querySelectorAll('input[name="save-mode"]').forEach(radio => {
     radio.onchange = (e) => {
-      uploadModalPreviewImg.src = URL.createObjectURL(e.target.value === 'single' ? currentProcessedBlob : currentCompareBlob);
+      const pBlob = window.aiState?.processedBlob || currentProcessedBlob;
+      const cBlob = window.aiState?.compareBlob || currentCompareBlob;
+      uploadModalPreviewImg.src = URL.createObjectURL(e.target.value === 'single' ? pBlob : cBlob);
     };
   });
 
@@ -474,15 +497,40 @@ window.initPicEdit = function () {
 
     try {
       const saveMode = document.querySelector('input[name="save-mode"]:checked')?.value || 'single';
-      const blobToUpload = saveMode === 'single' ? currentProcessedBlob : currentCompareBlob;
+      const pBlob = window.aiState?.processedBlob || currentProcessedBlob;
+      const cBlob = window.aiState?.compareBlob || currentCompareBlob;
+      const blobToUpload = saveMode === 'single' ? pBlob : cBlob;
+      
+      // Fetch Cloudinary config
+      const configRes = await fetch('/api/cloudinary-config');
+      const config = await configRes.json();
       
       const formData = new FormData();
-      formData.append('image', blobToUpload, 'ai-edit.png');
-      formData.append('model', modelSelect.value); // Send the selected model name
+      formData.append('file', blobToUpload);
+      formData.append('upload_preset', config.upload_preset);
+      formData.append('folder', `AI_Edits/${modelSelect.value.replace('.onnx', '')}`);
 
-      const response = await fetch('/api/upload-ai-edit', {
+      // Direct Upload to Cloudinary
+      const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${config.cloud_name}/image/upload`, {
         method: 'POST',
         body: formData
+      });
+      const cloudinaryData = await cloudinaryRes.json();
+
+      if (!cloudinaryData.secure_url) {
+         throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
+      }
+
+      // Notify Backend
+      const response = await fetch('/api/upload-ai-edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          secure_url: cloudinaryData.secure_url,
+          model: modelSelect.value
+        })
       });
 
       const data = await response.json();
