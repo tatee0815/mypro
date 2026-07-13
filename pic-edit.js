@@ -66,6 +66,7 @@ window.initPicEdit = function () {
       editorCanvas.height = window.aiState.finalCanvasData.height;
       ctx.drawImage(window.aiState.finalCanvasData, 0, 0);
       btnSave.disabled = false;
+      btnConvert.disabled = false; // Nhả khóa nút khi quay lại và process đã xong
       // Note: originalImgElement is needed if they want to re-convert
       if (window.aiState.originalImgElement) {
          originalImgElement.src = window.aiState.originalImgElement.src;
@@ -581,9 +582,9 @@ window.initPicEdit = function () {
 
       aiGallery.innerHTML = ''; // clear
 
-      images.forEach(url => {
+      images.forEach((url, index) => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'gallery-img-wrapper';
+        wrapper.className = 'gallery-img-wrapper gallery-item';
         wrapper.style.margin = '10px';
         wrapper.style.display = 'inline-block';
         wrapper.style.position = 'relative'; // For absolute badge
@@ -603,6 +604,10 @@ window.initPicEdit = function () {
         img.style.borderRadius = '10px';
         img.style.cursor = 'pointer';
         img.loading = 'lazy';
+
+        img.onload = () => {
+          setTimeout(() => wrapper.classList.add('loaded'), 100 + index * 60);
+        };
 
         // Determine model from url
         let modelBadge = 'AI Edit';

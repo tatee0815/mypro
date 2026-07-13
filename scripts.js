@@ -15,9 +15,9 @@ window.aiState = {
 // Global AI Badge Injection
 document.addEventListener('DOMContentLoaded', () => {
   const badgeHtml = `
-      <div id="global-ai-badge" style="display: none; position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.85); color: white; padding: 15px 25px; border-radius: 30px; z-index: 99999; border: 2px solid #24b7ff; cursor: pointer; box-shadow: 0 0 15px rgba(36,183,255,0.7); font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 500; align-items: center; gap: 15px;">
-        <i class="fa-solid fa-microchip fa-spin" style="color: #00ffcc; font-size: 1.5rem;"></i>
-        <span id="global-ai-badge-text">AI Processing... 0%</span>
+      <div id="global-ai-badge" class="global-ai-badge" style="display: none;">
+        <i id="global-ai-badge-icon" class="fa-solid fa-microchip fa-spin"></i>
+        <span id="global-ai-badge-text" class="global-ai-badge-text">AI Processing... 0%</span>
       </div>
     `;
   document.body.insertAdjacentHTML('beforeend', badgeHtml);
@@ -38,12 +38,40 @@ window.updateGlobalAiProgress = (percent, text) => {
 
   const badge = document.getElementById('global-ai-badge');
   const badgeText = document.getElementById('global-ai-badge-text');
+  const badgeIcon = document.getElementById('global-ai-badge-icon');
+
+  if (!badge) return;
 
   if (window.aiState.isProcessing) {
-    if (badge) badge.style.display = 'flex';
+    if (badge.style.display === 'none') {
+      badge.style.display = 'flex';
+      // Force reflow to trigger CSS transitions correctly
+      void badge.offsetWidth;
+    }
+    badge.classList.add('visible', 'breathing');
+    badge.classList.remove('completed');
+
+    if (badgeIcon) badgeIcon.className = 'fa-solid fa-microchip fa-spin';
     if (badgeText) badgeText.innerText = `AI Processing... ${percent}%`;
   } else {
-    if (badge) badge.style.display = 'none';
+    // Gentle Completion State
+    if (badge.classList.contains('visible')) {
+      badge.classList.remove('breathing');
+      badge.classList.add('completed');
+
+      if (badgeIcon) badgeIcon.className = 'fa-solid fa-check';
+      if (badgeText) badgeText.innerText = `Inference Complete`;
+
+      // Soft linger before fading out
+      setTimeout(() => {
+        badge.classList.remove('visible');
+        setTimeout(() => {
+          if (!window.aiState.isProcessing) {
+            badge.style.display = 'none';
+          }
+        }, 500); // Wait for opacity transition
+      }, 2500);
+    }
   }
 };
 // Global Modal getters
@@ -90,16 +118,71 @@ if (menuBtn && nav) {
   console.error('Không tìm thấy .menu-toggle hoặc nav trong DOM');
 }
 
+// Global thumbnail update function for projects (SPA safe)
+window.updateActiveThumbnail = function(el) {
+  const parent = el.parentElement;
+  if (!parent) return;
+  const thumbnails = parent.querySelectorAll('.project-thumbnail');
+  thumbnails.forEach(thumb => thumb.classList.remove('active'));
+  el.classList.add('active');
+};
+
 // Modal functions
-function openModal(imgSrc) {
+function openModal(imgSrc, thumbSrc) {
   const els = getModalEls();
   if (!els.modal || !els.img) {
     console.error('Không tìm thấy các phần tử modal cốt lõi (#img-modal hoặc #img-modal-img)');
     return;
   }
 
-  els.img.src = imgSrc.src ? imgSrc.src : imgSrc;
+  const actualSrc = imgSrc.src ? imgSrc.src : imgSrc;
+  const placeholder = thumbSrc || actualSrc;
+
+  els.img.src = placeholder;
   els.img.style.display = 'block';
+  
+  // Blur effect for loading
+  if (actualSrc !== placeholder) {
+      els.img.style.filter = 'blur(15px)';
+      els.img.style.transition = 'filter 0.5s ease-out';
+      els.img.style.transform = 'scale(1.05)'; // slight crop to hide blurred edges
+  } else {
+      els.img.style.filter = 'none';
+      els.img.style.transform = 'none';
+  }
+
+  // Loading spinner
+  let spinner = els.modal.querySelector('.modal-spinner');
+  if (!spinner) {
+      spinner = document.createElement('i');
+      spinner.className = 'modal-spinner fa-solid fa-circle-notch fa-spin';
+      spinner.style.position = 'absolute';
+      spinner.style.color = 'rgba(255, 255, 255, 0.7)';
+      spinner.style.fontSize = '3rem';
+      spinner.style.zIndex = '999999';
+      spinner.style.pointerEvents = 'none';
+      els.modal.appendChild(spinner);
+  }
+  
+  if (actualSrc !== placeholder) {
+      spinner.style.display = 'block';
+      
+      const highResImg = new Image();
+      highResImg.onload = () => {
+          // Verify we're still looking at the same image (user didn't click another one fast)
+          if (els.modal.classList.contains('active') && highResImg.src.includes(actualSrc)) {
+              els.img.src = actualSrc;
+              els.img.style.filter = 'blur(0)';
+              els.img.style.transform = 'scale(1)';
+              spinner.style.display = 'none';
+          }
+      };
+      highResImg.onerror = () => { spinner.style.display = 'none'; };
+      highResImg.src = actualSrc;
+  } else {
+      spinner.style.display = 'none';
+  }
+
   if (els.deleteModal) els.deleteModal.style.display = 'none';
   if (els.uploadModal) els.uploadModal.style.display = 'none';
   els.modal.classList.add('active');
@@ -245,7 +328,7 @@ async function fetchImages() {
     const images = await res.json();
     const gallery = document.getElementById('gallery');
     if (!gallery) return;
-    gallery.innerHTML = images.map(url => {
+    gallery.innerHTML = images.map((url, index) => {
       // Trích xuất public_id từ URL Cloudinary
       const parts = url.split('/');
       const uploadIndex = parts.indexOf('upload');
@@ -255,7 +338,7 @@ async function fetchImages() {
       const thumbUrl = url.replace('/upload/', '/upload/w_400,q_auto,f_auto/');
       return `
         <div class="gallery-item" style="display:inline-block; position:relative;">
-          <img src="${thumbUrl}" alt="pic" class="preview-img" data-src="${url}" style="cursor:pointer;">
+          <img src="${thumbUrl}" alt="pic" class="preview-img" data-src="${url}" style="cursor:pointer;" onload="setTimeout(() => this.parentElement.classList.add('loaded'), 100 + ${index} * 60)">
           <button onclick="deleteImage('${publicId}')" style="position:absolute; top:5px; right:5px; background:red; color:white; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; z-index:10;">×</button>
         </div>
       `;
@@ -414,7 +497,7 @@ window.closeModal = closeModal;
     if (e.target.classList.contains('preview-img')) {
       const src = e.target.getAttribute('data-src') || e.target.src;
       if (typeof window.openModal === 'function') {
-        window.openModal(src);
+        window.openModal(src, e.target.src); // Pass thumbnail as second argument
       }
     }
   });
@@ -454,58 +537,70 @@ window.closeModal = closeModal;
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, 'text/html');
 
-      // Replace main section (assuming all pages have a <section> for main content)
-      const currentSection = document.querySelector('section');
-      const newSection = doc.querySelector('section');
-      if (currentSection && newSection) {
-        currentSection.replaceWith(newSection);
-      }
-
-      // Update body classes (for background color changes)
-      document.body.className = doc.body.className;
-
-      // Update Title
-      document.title = doc.title;
-
-      // Update Nav active states
-      const nav = document.querySelector('nav');
-      if (nav) {
-        const newNav = doc.querySelector('nav');
-        if (newNav) {
-          nav.innerHTML = newNav.innerHTML;
-        }
-      }
-
-      // Push state
+      // Push state ngay lập tức để URL cập nhật mượt mà
       if (push) {
         history.pushState(null, '', url);
       }
 
-      // Re-trigger page specific logic if needed
-      if (url.includes('somepics.html')) {
-        if (typeof fetchImages === 'function') fetchImages();
-        if (typeof window.initSomePics === 'function') window.initSomePics();
-      }
+      const updateRestOfPage = () => {
+        // Cập nhật background và title đồng bộ với lúc đổi trang
+        document.body.className = doc.body.className;
+        document.title = doc.title;
 
-      if (url.includes('pic-edit.html')) {
-        // Load ONNX runtime dynamically if not present
-        if (!document.querySelector('script[src="pic-edit.js"]')) {
-          const script = document.createElement('script');
-          script.src = 'pic-edit.js';
-          script.onload = () => { if (typeof window.initPicEdit === 'function') window.initPicEdit(); };
-          document.body.appendChild(script);
-        } else {
-          if (typeof window.initPicEdit === 'function') window.initPicEdit();
+        // Cập nhật Nav active states
+        const nav = document.querySelector('nav');
+        if (nav) {
+          const newNav = doc.querySelector('nav');
+          if (newNav) {
+            nav.innerHTML = newNav.innerHTML;
+          }
         }
-      }
 
-      // Update Particles
-      if (typeof window.updateParticles === 'function') {
-        window.updateParticles();
-      }
+        // Kích hoạt lại script tùy trang
+        if (url.includes('somepics.html')) {
+          if (typeof fetchImages === 'function') fetchImages();
+          if (typeof window.initSomePics === 'function') window.initSomePics();
+        }
 
-      // Scroll to top
-      window.scrollTo(0, 0);
+        if (url.includes('pic-edit.html')) {
+          if (!document.querySelector('script[src="pic-edit.js"]')) {
+            const script = document.createElement('script');
+            script.src = 'pic-edit.js';
+            script.onload = () => { if (typeof window.initPicEdit === 'function') window.initPicEdit(); };
+            document.body.appendChild(script);
+          } else {
+            if (typeof window.initPicEdit === 'function') window.initPicEdit();
+          }
+        }
+
+        if (typeof window.updateParticles === 'function') {
+          window.updateParticles();
+        }
+        window.scrollTo(0, 0);
+      };
+
+      const currentSection = document.querySelector('section');
+      const newSection = doc.querySelector('section');
+
+      if (currentSection && newSection) {
+        // 1. Kích hoạt hiệu ứng mờ dần và trôi lên
+        currentSection.classList.add('page-exit');
+
+        // 2. Đợi CSS chạy xong (300ms) rồi mới tráo HTML và đổi màu nền
+        setTimeout(() => {
+          newSection.classList.add('page-enter');
+          currentSection.replaceWith(newSection);
+
+          updateRestOfPage(); // Đổi màu nền CHÍNH XÁC tại khoảnh khắc này
+
+          // 3. Xóa class sau khi animation hoàn tất để dọn dẹp
+          setTimeout(() => {
+            newSection.classList.remove('page-enter');
+          }, 300);
+        }, 300);
+      } else {
+        updateRestOfPage();
+      }
 
     } catch (error) {
       console.error('Failed to navigate:', error);
@@ -684,8 +779,8 @@ window.closeModal = closeModal;
       if (window.loopMode === 'loop-all') {
         window.loopMode = 'loop-one';
         loopModeBtn.innerHTML = `
-          <i class="fa-solid fa-repeat" style="color: #00f2fe;"></i>
-          <span style="font-size: 0.6rem; position: absolute; font-weight: 800; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00f2fe; background: #1a1a1a; border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; line-height: 1;">1</span>
+          <i class="fa-solid fa-repeat"></i>
+          <span style="position:absolute;font-size:0.55rem;font-weight:900;top:50%;left:50%;transform:translate(-50%, -50%);color:var(--text-color);">1</span>
         `;
         loopModeBtn.title = 'Loop One';
         loopModeBtn.style.position = 'relative'; // to handle absolute span
@@ -693,6 +788,10 @@ window.closeModal = closeModal;
         window.loopMode = 'shuffle';
         loopModeBtn.innerHTML = '<i class="fa-solid fa-shuffle"></i>';
         loopModeBtn.title = 'Shuffle';
+      } else if (window.loopMode === 'shuffle') {
+        window.loopMode = 'stop';
+        loopModeBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
+        loopModeBtn.title = 'Stop at end';
       } else {
         window.loopMode = 'loop-all';
         loopModeBtn.innerHTML = '<i class="fa-solid fa-repeat"></i>';
@@ -753,7 +852,7 @@ window.closeModal = closeModal;
               window.currentPlaylistIndex = -1;
               window.musicPlayer.loadVideoById(defaultVideoId);
               window.musicPlayer.pauseVideo();
-              document.getElementById('music-status').innerText = 'Default: Xương rồng - dangrangto';
+              document.getElementById('music-status').innerText = 'Ready to play: Xương rồng - dangrangto';
             }
           } else if (window.currentPlaylistIndex > index) {
             // Shift index if deleted item was before current
@@ -938,19 +1037,17 @@ window.closeModal = closeModal;
 
     if (event.data === YT.PlayerState.PLAYING) {
       playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-      if (statusText.innerText.includes('Ready') || statusText.innerText.includes('Paused')) {
+      if (statusText.innerText.includes('Ready') || statusText.innerText.includes('Paused') || statusText.innerText.includes('Stopped')) {
         if (window.currentPlaylistIndex >= 0 && window.myPlaylist[window.currentPlaylistIndex]) {
           statusText.innerText = `Playing: ${window.myPlaylist[window.currentPlaylistIndex].title}`;
         } else {
-          statusText.innerText = 'Default: Xương rồng - dangrangto';
+          statusText.innerText = 'Playing: Xương rồng - dangrangto';
         }
       }
     } else if (event.data === YT.PlayerState.PAUSED) {
       playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
       if (statusText.innerText.startsWith('Playing:')) {
         statusText.innerText = statusText.innerText.replace('Playing:', 'Paused:');
-      } else if (statusText.innerText.startsWith('Default:')) {
-        statusText.innerText = statusText.innerText.replace('Default:', 'Paused: Default');
       }
     } else if (event.data === YT.PlayerState.ENDED) {
       // Auto-play logic using myPlaylist
@@ -973,11 +1070,22 @@ window.closeModal = closeModal;
           window.musicPlayer.loadVideoById(nextSong.videoId);
           statusText.innerText = `Playing: ${nextSong.title}`;
         } else {
-          // loop-all
+          // loop-all or stop
           window.currentPlaylistIndex++;
-          // Loop back to start if it reaches the end
+          // Reached the end of the playlist
           if (window.currentPlaylistIndex >= window.myPlaylist.length) {
-            window.currentPlaylistIndex = 0;
+            if (window.loopMode === 'stop') {
+              window.currentPlaylistIndex = 0;
+              const firstSong = window.myPlaylist[0];
+              window.musicPlayer.loadVideoById(firstSong.videoId);
+              window.musicPlayer.pauseVideo();
+              statusText.innerText = `Stopped: ${firstSong.title}`;
+              window.renderPlaylist();
+              return; // Stop playback here
+            } else {
+              // loop-all
+              window.currentPlaylistIndex = 0;
+            }
           }
 
           const nextSong = window.myPlaylist[window.currentPlaylistIndex];
@@ -987,9 +1095,15 @@ window.closeModal = closeModal;
 
         window.renderPlaylist();
       } else {
-        // If no playlist, just loop the same default video
-        window.musicPlayer.seekTo(0);
-        window.musicPlayer.playVideo();
+        // If no playlist (default song)
+        if (window.loopMode === 'stop') {
+          window.musicPlayer.seekTo(0);
+          window.musicPlayer.pauseVideo();
+          statusText.innerText = 'Stopped: Xương rồng - dangrangto';
+        } else {
+          window.musicPlayer.seekTo(0);
+          window.musicPlayer.playVideo();
+        }
       }
     }
   }
