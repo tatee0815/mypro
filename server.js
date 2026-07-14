@@ -154,6 +154,10 @@ app.get('/api/youtube-search', (req, res) => {
     apiRes.on('end', () => {
       try {
         const parsedData = JSON.parse(data);
+        if (apiRes.statusCode !== 200) {
+          console.error('YouTube API Error Response:', parsedData);
+          return res.status(apiRes.statusCode).json(parsedData);
+        }
         res.json(parsedData);
       } catch (e) {
         res.status(500).json({ error: 'Lỗi parse dữ liệu' });

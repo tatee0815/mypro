@@ -935,6 +935,14 @@ window.closeModal = closeModal;
         const response = await fetch(url);
         const data = await response.json();
 
+        if (!response.ok) {
+          console.error("Backend returned error:", data);
+          const errorMsg = data.error?.message || data.error || "Search failed.";
+          resultsContainer.innerHTML = `<span style="color:red; padding:5px;">Lỗi: ${errorMsg}</span>`;
+          resultsContainer.classList.add('active');
+          return;
+        }
+
         if (data.items && data.items.length > 0) {
           renderSearchResults(data.items);
         } else {
@@ -952,6 +960,7 @@ window.closeModal = closeModal;
 
     function renderSearchResults(items) {
       resultsContainer.innerHTML = ''; // clear previous
+      let addedCount = 0;
 
       items.forEach(item => {
         const videoId = item.id.videoId;
@@ -1025,7 +1034,12 @@ window.closeModal = closeModal;
         });
 
         resultsContainer.appendChild(div);
+        addedCount++;
       });
+
+      if (addedCount === 0) {
+        resultsContainer.innerHTML = '<span style="color:white; padding:5px;">No results found.</span>';
+      }
 
       resultsContainer.classList.add('active');
     }
