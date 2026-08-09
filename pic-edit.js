@@ -34,30 +34,30 @@ window.initPicEdit = function () {
       loadingOverlay.style.display = 'flex';
       btnConvert.disabled = true;
       if (window.aiState.originalImgElement) {
-         originalImgElement.src = window.aiState.originalImgElement.src;
-         editorCanvas.width = originalImgElement.width;
-         editorCanvas.height = originalImgElement.height;
-         ctx.drawImage(originalImgElement, 0, 0);
+        originalImgElement.src = window.aiState.originalImgElement.src;
+        editorCanvas.width = originalImgElement.width;
+        editorCanvas.height = originalImgElement.height;
+        ctx.drawImage(originalImgElement, 0, 0);
       }
-      
+
       // Setup progress callback to update local UI while processing
       window.aiState.onMessageCallback = (percent, text, previewCanvas) => {
         const fill = document.getElementById('progress-bar-fill');
         const textEl = document.getElementById('loading-text');
         if (fill) fill.style.width = percent + '%';
         if (textEl) textEl.innerText = text;
-        
+
         // Live preview of stitched canvas
         if (previewCanvas) {
-           editorCanvas.width = previewCanvas.width;
-           editorCanvas.height = previewCanvas.height;
-           ctx.drawImage(previewCanvas, 0, 0);
+          editorCanvas.width = previewCanvas.width;
+          editorCanvas.height = previewCanvas.height;
+          ctx.drawImage(previewCanvas, 0, 0);
         }
       };
-      
+
       // Fire it once immediately to sync
       window.aiState.onMessageCallback(window.aiState.progress.percent, window.aiState.progress.text, window.aiState.stitchedCanvas);
-      
+
     } else if (window.aiState.finalCanvasData) {
       // Completed processing while away
       canvasWrapper.style.display = 'flex';
@@ -69,7 +69,7 @@ window.initPicEdit = function () {
       btnConvert.disabled = false; // Nhả khóa nút khi quay lại và process đã xong
       // Note: originalImgElement is needed if they want to re-convert
       if (window.aiState.originalImgElement) {
-         originalImgElement.src = window.aiState.originalImgElement.src;
+        originalImgElement.src = window.aiState.originalImgElement.src;
       }
     }
   }
@@ -143,281 +143,281 @@ window.initPicEdit = function () {
 
     // Global State Registration
     if (window.aiState) {
-        window.aiState.isProcessing = true;
-        window.aiState.originalImgElement = originalImgElement;
-        window.aiState.finalCanvasData = null; // reset
+      window.aiState.isProcessing = true;
+      window.aiState.originalImgElement = originalImgElement;
+      window.aiState.finalCanvasData = null; // reset
     }
 
     // Helper for progress UI
     function updateProgress(percent, text) {
       if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(percent, text);
-      
+
       const fill = document.getElementById('progress-bar-fill');
       const textEl = document.getElementById('loading-text');
       if (fill) fill.style.width = percent + '%';
       if (textEl) textEl.innerText = text;
-      
+
       if (window.aiState && window.aiState.onMessageCallback) {
-          // Trigger any external UI hooks if the user navigated back
-          window.aiState.onMessageCallback(percent, text, window.aiState.stitchedCanvas);
+        // Trigger any external UI hooks if the user navigated back
+        window.aiState.onMessageCallback(percent, text, window.aiState.stitchedCanvas);
       }
     }
 
     try {
       updateProgress(10, 'Initializing AI engine...');
 
-        const isRealESRGAN = selectedModel.includes('real_esrgan');
-        const upscaleFactor = isRealESRGAN ? 2 : 1; // Strictly lock to 2x multiplier for stability
-        
-        const MAX_DIMENSION = 1080; // Restrict max processing resolution to prevent memory overflow before tiling
-        let scale = Math.min(MAX_DIMENSION / originalImgElement.width, MAX_DIMENSION / originalImgElement.height);
-        if (scale > 1) scale = 1;
+      const isRealESRGAN = selectedModel.includes('real_esrgan');
+      const upscaleFactor = isRealESRGAN ? 2 : 1; // Strictly lock to 2x multiplier for stability
 
-        let newW = Math.floor(originalImgElement.width * scale);
-        let newH = Math.floor(originalImgElement.height * scale);
-        
-        // Ensure dimensions are multiples of 32 for CNN models (like AnimeGAN) to prevent tensor shape mismatch
-        newW = newW - (newW % 32);
-        newH = newH - (newH % 32);
-        
-        // If image is too small after modulo, enforce a minimum 32x32 size
-        if (newW < 32) newW = 32;
-        if (newH < 32) newH = 32;
-        
-        if (scale < 1) {
-            console.log(`[AI Filter] Resized image from ${originalImgElement.width}x${originalImgElement.height} to ${newW}x${newH}`);
+      const MAX_DIMENSION = isRealESRGAN ? 1080 : 512; // AnimeGAN requires smaller resolution to avoid WebGL OOM
+      let scale = Math.min(MAX_DIMENSION / originalImgElement.width, MAX_DIMENSION / originalImgElement.height);
+      if (scale > 1) scale = 1;
+
+      let newW = Math.floor(originalImgElement.width * scale);
+      let newH = Math.floor(originalImgElement.height * scale);
+
+      // Ensure dimensions are multiples of 32 for CNN models (like AnimeGAN) to prevent tensor shape mismatch
+      newW = newW - (newW % 32);
+      newH = newH - (newH % 32);
+
+      // If image is too small after modulo, enforce a minimum 32x32 size
+      if (newW < 32) newW = 32;
+      if (newH < 32) newH = 32;
+
+      if (scale < 1) {
+        console.log(`[AI Filter] Resized image from ${originalImgElement.width}x${originalImgElement.height} to ${newW}x${newH}`);
+      }
+
+      const finalW = newW * upscaleFactor;
+      const finalH = newH * upscaleFactor;
+
+      // Prepare offscreen canvas for source image
+      let offCanvas = document.createElement('canvas');
+      offCanvas.width = newW;
+      offCanvas.height = newH;
+      let offCtx = offCanvas.getContext('2d');
+      offCtx.drawImage(originalImgElement, 0, 0, newW, newH);
+
+      // Prepare final stitched canvas
+      const stitchedCanvas = document.createElement('canvas');
+      stitchedCanvas.width = finalW;
+      stitchedCanvas.height = finalH;
+      const stitchedCtx = stitchedCanvas.getContext('2d', { willReadFrequently: true });
+
+      if (window.aiState) {
+        window.aiState.stitchedCanvas = stitchedCanvas; // Store globally for live preview restoration
+      }
+
+      try {
+        updateProgress(10, 'Initializing AI Worker...');
+
+        if (!window.globalAiWorker) {
+          window.globalAiWorker = new Worker('ai-worker.js');
         }
+        const worker = window.globalAiWorker;
+        window.aiState.worker = worker; // Sync backward compatibility
 
-        const finalW = newW * upscaleFactor;
-        const finalH = newH * upscaleFactor;
+        await new Promise((resolve, reject) => {
+          worker.onmessage = (e) => {
+            if (e.data.type === 'init_done') {
+              const hwStatus = document.getElementById('hardware-status');
+              if (hwStatus) {
+                if (e.data.provider === 'wasm') {
+                  hwStatus.innerText = "Running in power-save mode (CPU). Processing might be slower on this device.";
+                } else {
+                  hwStatus.innerText = "Accelerated by GPU.";
+                }
+              }
+              resolve();
+            }
+            if (e.data.type === 'error') reject(new Error(e.data.error));
+          };
+          worker.postMessage({ type: 'init', modelName: selectedModel, isRealESRGAN });
+        });
 
-        // Prepare offscreen canvas for source image
-        let offCanvas = document.createElement('canvas');
-        offCanvas.width = newW;
-        offCanvas.height = newH;
-        let offCtx = offCanvas.getContext('2d');
-        offCtx.drawImage(originalImgElement, 0, 0, newW, newH);
+        if (isRealESRGAN) {
+          // Tiling Algorithm with Overlap (Seamless Tiling)
+          const tileSize = 256;
+          const margin = 32;
 
-        // Prepare final stitched canvas
-        const stitchedCanvas = document.createElement('canvas');
-        stitchedCanvas.width = finalW;
-        stitchedCanvas.height = finalH;
-        const stitchedCtx = stitchedCanvas.getContext('2d', { willReadFrequently: true });
-        
-        if (window.aiState) {
-            window.aiState.stitchedCanvas = stitchedCanvas; // Store globally for live preview restoration
-        }
+          const cols = Math.ceil(newW / tileSize);
+          const rows = Math.ceil(newH / tileSize);
+          const totalTiles = cols * rows;
+          let currentTile = 0;
 
-        try {
-          updateProgress(10, 'Initializing AI Worker...');
-          
-          if (!window.globalAiWorker) {
-              window.globalAiWorker = new Worker('ai-worker.js');
-          }
-          const worker = window.globalAiWorker;
-          window.aiState.worker = worker; // Sync backward compatibility
-          
-          await new Promise((resolve, reject) => {
-              worker.onmessage = (e) => {
-                  if (e.data.type === 'init_done') {
-                      const hwStatus = document.getElementById('hardware-status');
-                      if (hwStatus) {
-                          if (e.data.provider === 'wasm') {
-                              hwStatus.innerText = "Running in power-save mode (CPU). Processing might be slower on this device.";
-                          } else {
-                              hwStatus.innerText = "Accelerated by GPU.";
-                          }
-                      }
-                      resolve();
-                  }
+          // Pre-read full source image data for fast edge clamping extraction
+          const sourceImgData = offCtx.getImageData(0, 0, newW, newH).data;
+
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              currentTile++;
+              updateProgress(20 + Math.floor((currentTile / totalTiles) * 70), `Processing tile ${currentTile} of ${totalTiles}...`);
+
+              const startX = x * tileSize;
+              const startY = y * tileSize;
+
+              const padW = tileSize + margin * 2;
+              const padH = tileSize + margin * 2;
+
+              const tileImgData = new ImageData(padW, padH);
+              const destData = tileImgData.data;
+
+              // Extract with clamp padding
+              for (let ty = 0; ty < padH; ty++) {
+                for (let tx = 0; tx < padW; tx++) {
+                  let srcY = Math.max(0, Math.min(newH - 1, startY - margin + ty));
+                  let srcX = Math.max(0, Math.min(newW - 1, startX - margin + tx));
+
+                  let destIdx = (ty * padW + tx) * 4;
+                  let srcIdx = (srcY * newW + srcX) * 4;
+
+                  destData[destIdx] = sourceImgData[srcIdx];
+                  destData[destIdx + 1] = sourceImgData[srcIdx + 1];
+                  destData[destIdx + 2] = sourceImgData[srcIdx + 2];
+                  destData[destIdx + 3] = sourceImgData[srcIdx + 3];
+                }
+              }
+
+              // Send to worker
+              const tileResult = await new Promise((resolve, reject) => {
+                worker.onmessage = (e) => {
+                  if (e.data.type === 'process_done') resolve(e.data);
                   if (e.data.type === 'error') reject(new Error(e.data.error));
-              };
-              worker.postMessage({ type: 'init', modelName: selectedModel, isRealESRGAN });
+                };
+                worker.postMessage({
+                  type: 'process',
+                  modelName: selectedModel,
+                  isRealESRGAN,
+                  buffer: tileImgData.data.buffer,
+                  width: padW,
+                  height: padH,
+                  tileId: currentTile
+                }, [tileImgData.data.buffer]);
+              });
+
+              // Convert returned data to ImageData
+              const upscaledTileData = new ImageData(
+                new Uint8ClampedArray(tileResult.buffer),
+                tileResult.outW,
+                tileResult.outH
+              );
+
+              const tempResultCanvas = document.createElement('canvas');
+              tempResultCanvas.width = tileResult.outW;
+              tempResultCanvas.height = tileResult.outH;
+              const tempResultCtx = tempResultCanvas.getContext('2d');
+              tempResultCtx.putImageData(upscaledTileData, 0, 0);
+
+              // Calculate crop (Discard Edges)
+              const scaledMargin = margin * upscaleFactor;
+              const scaledTileSize = tileSize * upscaleFactor;
+
+              // Stitch: Draw only the core onto stitchedCanvas
+              stitchedCtx.drawImage(
+                tempResultCanvas,
+                scaledMargin, scaledMargin, scaledTileSize, scaledTileSize, // Source core
+                startX * upscaleFactor, startY * upscaleFactor, scaledTileSize, scaledTileSize // Dest coordinates
+              );
+            }
+          }
+        } else {
+          // Direct processing for non-RealESRGAN models
+          updateProgress(50, 'Processing full image...');
+          const fullImgData = offCtx.getImageData(0, 0, newW, newH);
+
+          const result = await new Promise((resolve, reject) => {
+            worker.onmessage = (e) => {
+              if (e.data.type === 'process_done') resolve(e.data);
+              if (e.data.type === 'error') reject(new Error(e.data.error));
+            };
+            worker.postMessage({
+              type: 'process',
+              modelName: selectedModel,
+              isRealESRGAN,
+              buffer: fullImgData.data.buffer,
+              width: newW,
+              height: newH,
+              tileId: 1
+            }, [fullImgData.data.buffer]);
           });
 
-          if (isRealESRGAN) {
-              // Tiling Algorithm with Overlap (Seamless Tiling)
-              const tileSize = 256;
-              const margin = 32;
-              
-              const cols = Math.ceil(newW / tileSize);
-              const rows = Math.ceil(newH / tileSize);
-              const totalTiles = cols * rows;
-              let currentTile = 0;
-              
-              // Pre-read full source image data for fast edge clamping extraction
-              const sourceImgData = offCtx.getImageData(0, 0, newW, newH).data;
-
-              for (let y = 0; y < rows; y++) {
-                  for (let x = 0; x < cols; x++) {
-                      currentTile++;
-                      updateProgress(20 + Math.floor((currentTile / totalTiles) * 70), `Processing tile ${currentTile} of ${totalTiles}...`);
-                      
-                      const startX = x * tileSize;
-                      const startY = y * tileSize;
-                      
-                      const padW = tileSize + margin * 2;
-                      const padH = tileSize + margin * 2;
-                      
-                      const tileImgData = new ImageData(padW, padH);
-                      const destData = tileImgData.data;
-                      
-                      // Extract with clamp padding
-                      for (let ty = 0; ty < padH; ty++) {
-                          for (let tx = 0; tx < padW; tx++) {
-                              let srcY = Math.max(0, Math.min(newH - 1, startY - margin + ty));
-                              let srcX = Math.max(0, Math.min(newW - 1, startX - margin + tx));
-                              
-                              let destIdx = (ty * padW + tx) * 4;
-                              let srcIdx = (srcY * newW + srcX) * 4;
-                              
-                              destData[destIdx] = sourceImgData[srcIdx];
-                              destData[destIdx+1] = sourceImgData[srcIdx+1];
-                              destData[destIdx+2] = sourceImgData[srcIdx+2];
-                              destData[destIdx+3] = sourceImgData[srcIdx+3];
-                          }
-                      }
-                      
-                      // Send to worker
-                      const tileResult = await new Promise((resolve, reject) => {
-                          worker.onmessage = (e) => {
-                              if (e.data.type === 'process_done') resolve(e.data);
-                              if (e.data.type === 'error') reject(new Error(e.data.error));
-                          };
-                          worker.postMessage({
-                              type: 'process',
-                              modelName: selectedModel,
-                              isRealESRGAN,
-                              buffer: tileImgData.data.buffer,
-                              width: padW,
-                              height: padH,
-                              tileId: currentTile
-                          }, [tileImgData.data.buffer]);
-                      });
-                      
-                      // Convert returned data to ImageData
-                      const upscaledTileData = new ImageData(
-                          new Uint8ClampedArray(tileResult.buffer),
-                          tileResult.outW,
-                          tileResult.outH
-                      );
-                      
-                      const tempResultCanvas = document.createElement('canvas');
-                      tempResultCanvas.width = tileResult.outW;
-                      tempResultCanvas.height = tileResult.outH;
-                      const tempResultCtx = tempResultCanvas.getContext('2d');
-                      tempResultCtx.putImageData(upscaledTileData, 0, 0);
-                      
-                      // Calculate crop (Discard Edges)
-                      const scaledMargin = margin * upscaleFactor;
-                      const scaledTileSize = tileSize * upscaleFactor;
-                      
-                      // Stitch: Draw only the core onto stitchedCanvas
-                      stitchedCtx.drawImage(
-                          tempResultCanvas,
-                          scaledMargin, scaledMargin, scaledTileSize, scaledTileSize, // Source core
-                          startX * upscaleFactor, startY * upscaleFactor, scaledTileSize, scaledTileSize // Dest coordinates
-                      );
-                  }
-              }
-          } else {
-              // Direct processing for non-RealESRGAN models
-              updateProgress(50, 'Processing full image...');
-              const fullImgData = offCtx.getImageData(0, 0, newW, newH);
-              
-              const result = await new Promise((resolve, reject) => {
-                  worker.onmessage = (e) => {
-                      if (e.data.type === 'process_done') resolve(e.data);
-                      if (e.data.type === 'error') reject(new Error(e.data.error));
-                  };
-                  worker.postMessage({
-                      type: 'process',
-                      modelName: selectedModel,
-                      isRealESRGAN,
-                      buffer: fullImgData.data.buffer,
-                      width: newW,
-                      height: newH,
-                      tileId: 1
-                  }, [fullImgData.data.buffer]);
-              });
-              
-              const upscaledData = new ImageData(
-                  new Uint8ClampedArray(result.buffer),
-                  result.outW,
-                  result.outH
-              );
-              stitchedCtx.putImageData(upscaledData, 0, 0);
-          }
-          // Removed worker.terminate() so it persists in the background for future runs.
-
-          updateProgress(95, 'Rendering final image...');
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          // Override offCanvas with the final stitched result
-          offCanvas = stitchedCanvas;
-          offCtx = stitchedCtx;
-
-          console.log(`Inference completed.`);
-          updateProgress(100, 'Done!');
-        } catch (err) {
-          console.warn("ONNX Worker inference failed. Running fallback demo filter.", err);
-          updateProgress(60, 'AI failed, falling back to demo filter...');
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          applyDemoFilter(offCtx, offCanvas.width, offCanvas.height, selectedModel);
-          updateProgress(100, 'Done!');
+          const upscaledData = new ImageData(
+            new Uint8ClampedArray(result.buffer),
+            result.outW,
+            result.outH
+          );
+          stitchedCtx.putImageData(upscaledData, 0, 0);
         }
+        // Removed worker.terminate() so it persists in the background for future runs.
 
-        // Tái lấy lại DOM elements vì user có thể đã lướt qua trang khác rồi quay lại
-        const currentEditorCanvas = document.getElementById('editor-canvas');
-        let currentCtx = null;
-        
-        if (currentEditorCanvas) {
-            currentEditorCanvas.width = originalImgElement.width * 2;
-            currentEditorCanvas.height = originalImgElement.height;
-            currentCtx = currentEditorCanvas.getContext('2d');
-            currentCtx.drawImage(originalImgElement, 0, 0);
-            currentCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
-            
-            currentCtx.beginPath();
-            currentCtx.moveTo(originalImgElement.width, 0);
-            currentCtx.lineTo(originalImgElement.width, originalImgElement.height);
-            currentCtx.strokeStyle = "white";
-            currentCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
-            currentCtx.stroke();
-        }
+        updateProgress(95, 'Rendering final image...');
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-        // Render ra offscreen canvas để lưu vào State (phòng trường hợp DOM đang ẩn)
-        const finalStateCanvas = document.createElement('canvas');
-        finalStateCanvas.width = originalImgElement.width * 2;
-        finalStateCanvas.height = originalImgElement.height;
-        const finalCtx = finalStateCanvas.getContext('2d');
-        finalCtx.drawImage(originalImgElement, 0, 0);
-        finalCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
-        
-        finalCtx.beginPath();
-        finalCtx.moveTo(originalImgElement.width, 0);
-        finalCtx.lineTo(originalImgElement.width, originalImgElement.height);
-        finalCtx.strokeStyle = "white";
-        finalCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
-        finalCtx.stroke();
+        // Override offCanvas with the final stitched result
+        offCanvas = stitchedCanvas;
+        offCtx = stitchedCtx;
 
-        if (window.aiState) {
-            window.aiState.finalCanvasData = finalStateCanvas;
-        }
+        console.log(`Inference completed.`);
+        updateProgress(100, 'Done!');
+      } catch (err) {
+        console.warn("ONNX Worker inference failed. Running fallback demo filter.", err);
+        updateProgress(60, 'AI failed, falling back to demo filter...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        applyDemoFilter(offCtx, offCanvas.width, offCanvas.height, selectedModel);
+        updateProgress(100, 'Done!');
+      }
 
-        offCanvas.toBlob((b) => {
-          currentProcessedBlob = b;
-          if (window.aiState) window.aiState.processedBlob = b;
-          const currentBtnSave = document.getElementById('btn-save');
-          if (currentBtnSave) currentBtnSave.disabled = false;
-        }, 'image/jpeg', 0.9);
+      // Tái lấy lại DOM elements vì user có thể đã lướt qua trang khác rồi quay lại
+      const currentEditorCanvas = document.getElementById('editor-canvas');
+      let currentCtx = null;
 
-        finalStateCanvas.toBlob((b) => {
-          currentCompareBlob = b;
-          if (window.aiState) window.aiState.compareBlob = b;
-        }, 'image/jpeg', 0.9);
+      if (currentEditorCanvas) {
+        currentEditorCanvas.width = originalImgElement.width * 2;
+        currentEditorCanvas.height = originalImgElement.height;
+        currentCtx = currentEditorCanvas.getContext('2d');
+        currentCtx.drawImage(originalImgElement, 0, 0);
+        currentCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
 
-        await new Promise(resolve => setTimeout(resolve, 400));
+        currentCtx.beginPath();
+        currentCtx.moveTo(originalImgElement.width, 0);
+        currentCtx.lineTo(originalImgElement.width, originalImgElement.height);
+        currentCtx.strokeStyle = "white";
+        currentCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
+        currentCtx.stroke();
+      }
+
+      // Render ra offscreen canvas để lưu vào State (phòng trường hợp DOM đang ẩn)
+      const finalStateCanvas = document.createElement('canvas');
+      finalStateCanvas.width = originalImgElement.width * 2;
+      finalStateCanvas.height = originalImgElement.height;
+      const finalCtx = finalStateCanvas.getContext('2d');
+      finalCtx.drawImage(originalImgElement, 0, 0);
+      finalCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, originalImgElement.width, 0, originalImgElement.width, originalImgElement.height);
+
+      finalCtx.beginPath();
+      finalCtx.moveTo(originalImgElement.width, 0);
+      finalCtx.lineTo(originalImgElement.width, originalImgElement.height);
+      finalCtx.strokeStyle = "white";
+      finalCtx.lineWidth = Math.max(2, originalImgElement.width * 0.01);
+      finalCtx.stroke();
+
+      if (window.aiState) {
+        window.aiState.finalCanvasData = finalStateCanvas;
+      }
+
+      offCanvas.toBlob((b) => {
+        currentProcessedBlob = b;
+        if (window.aiState) window.aiState.processedBlob = b;
+        const currentBtnSave = document.getElementById('btn-save');
+        if (currentBtnSave) currentBtnSave.disabled = false;
+      }, 'image/jpeg', 0.9);
+
+      finalStateCanvas.toBlob((b) => {
+        currentCompareBlob = b;
+        if (window.aiState) window.aiState.compareBlob = b;
+      }, 'image/jpeg', 0.9);
+
+      await new Promise(resolve => setTimeout(resolve, 400));
 
     } catch (error) {
       console.error('Error during AI processing:', error);
@@ -425,19 +425,19 @@ window.initPicEdit = function () {
     } finally {
       const currentLoadingOverlay = document.getElementById('loading-overlay');
       if (currentLoadingOverlay) currentLoadingOverlay.style.display = 'none';
-      
+
       const fill = document.getElementById('progress-bar-fill');
       if (fill) fill.style.width = '0%';
       const hwStatus = document.getElementById('hardware-status');
       if (hwStatus) hwStatus.innerText = '';
-      
+
       const currentBtnConvert = document.getElementById('btn-convert');
       if (currentBtnConvert) currentBtnConvert.disabled = false;
-      
+
       if (window.aiState) {
-          window.aiState.isProcessing = false;
-          window.aiState.onMessageCallback = null;
-          if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(0, '');
+        window.aiState.isProcessing = false;
+        window.aiState.onMessageCallback = null;
+        if (window.updateGlobalAiProgress) window.updateGlobalAiProgress(0, '');
       }
     }
   };
@@ -471,14 +471,14 @@ window.initPicEdit = function () {
     // Luôn ưu tiên lấy blob mới nhất từ window.aiState nếu có
     const pBlob = window.aiState?.processedBlob || currentProcessedBlob;
     const cBlob = window.aiState?.compareBlob || currentCompareBlob;
-    
+
     if (!pBlob || !cBlob) return;
-    
+
     const saveMode = document.querySelector('input[name="save-mode"]:checked')?.value || 'single';
     const blobToUpload = saveMode === 'single' ? pBlob : cBlob;
-    
+
     uploadModalPreviewImg.src = URL.createObjectURL(blobToUpload);
-    
+
     openModal(uploadModal);
   };
 
@@ -501,11 +501,11 @@ window.initPicEdit = function () {
       const pBlob = window.aiState?.processedBlob || currentProcessedBlob;
       const cBlob = window.aiState?.compareBlob || currentCompareBlob;
       const blobToUpload = saveMode === 'single' ? pBlob : cBlob;
-      
+
       // Fetch Cloudinary config
       const configRes = await fetch('/api/cloudinary-config');
       const config = await configRes.json();
-      
+
       const formData = new FormData();
       formData.append('file', blobToUpload);
       formData.append('upload_preset', config.upload_preset);
@@ -519,7 +519,7 @@ window.initPicEdit = function () {
       const cloudinaryData = await cloudinaryRes.json();
 
       if (!cloudinaryData.secure_url) {
-         throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
+        throw new Error(cloudinaryData.error?.message || 'Cloudinary upload failed');
       }
 
       // Notify Backend
